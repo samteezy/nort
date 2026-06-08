@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Volume_Cap__c</fullName>
+    <label>Volume Cap</label>
+    <description>Optional ceiling on the number of new signatures diagnosed per window. Left blank = unlimited (the chosen dedup-only behavior). Populate in Setup to cap spend during a diverse-error storm without a code change.</description>
+    <inlineHelpText>Max new signatures diagnosed per window. Leave blank for unlimited (dedup-only).</inlineHelpText>
+    <type>Number</type>
+    <precision>18</precision>
+    <scale>0</scale>
+    <required>false</required>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

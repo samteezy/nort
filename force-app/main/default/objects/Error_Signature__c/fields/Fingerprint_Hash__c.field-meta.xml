@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Fingerprint_Hash__c</fullName>
+    <label>Fingerprint Hash</label>
+    <description>SHA-256 hex of the normalized fingerprint key. Unique external id: this is what makes "diagnose at most once per unique fingerprint" a database guarantee, enabling upsert-as-dedup.</description>
+    <inlineHelpText>The unique fingerprint for this error signature. Set by the system; do not edit.</inlineHelpText>
+    <type>Text</type>
+    <length>64</length>
+    <required>true</required>
+    <externalId>true</externalId>
+    <unique>true</unique>
+    <caseSensitive>true</caseSensitive>
+</CustomField>

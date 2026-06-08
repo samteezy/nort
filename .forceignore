@@ -1,0 +1,12 @@
+# Local dev artifacts
+**/.eslintrc.json
+**/__tests__/**
+**/*.dup-meta.xml
+
+# sf CLI
+.sf/
+.sfdx/
+.localdevserver/
+
+# OS / editor
+.DS_Store

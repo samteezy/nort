@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Case__c</fullName>
+    <label>Case</label>
+    <description>The currently mapped support case for this signature. New fingerprints create a case; recurring open fingerprints map back to it; recurrence after close creates a new linked case.</description>
+    <inlineHelpText>The support case currently tracking this error signature.</inlineHelpText>
+    <type>Lookup</type>
+    <referenceTo>Case</referenceTo>
+    <relationshipLabel>Error Signatures</relationshipLabel>
+    <relationshipName>Error_Signatures</relationshipName>
+    <required>false</required>
+    <deleteConstraint>SetNull</deleteConstraint>
+</CustomField>

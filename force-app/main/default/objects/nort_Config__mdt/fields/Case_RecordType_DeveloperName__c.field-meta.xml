@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Case_RecordType_DeveloperName__c</fullName>
+    <label>Case Record Type Developer Name</label>
+    <description>Developer name of the dedicated Case record type for auto-created error cases. Used to exclude these cases from entitlements, SLA, and CSAT.</description>
+    <inlineHelpText>Developer name of the Case record type for auto-created error cases.</inlineHelpText>
+    <type>Text</type>
+    <length>255</length>
+    <required>false</required>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

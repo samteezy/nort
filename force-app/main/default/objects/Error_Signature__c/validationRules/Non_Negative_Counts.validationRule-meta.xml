@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Non_Negative_Counts</fullName>
+    <active>true</active>
+    <description>Guards the dedup and spend ledgers from going negative. Never triggered by nort's own automation; catches bad manual edits or future regressions.</description>
+    <errorConditionFormula><![CDATA[Occurrence_Count__c < 0 || Agent_Invocation_Count__c < 0]]></errorConditionFormula>
+    <errorMessage>Occurrence Count and Agent Invocation Count cannot be negative.</errorMessage>
+</ValidationRule>

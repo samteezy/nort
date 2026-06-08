@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Diagnosis_Status__c</fullName>
+    <label>Diagnosis Status</label>
+    <description>State of the agent diagnosis for this signature. The spend guard: only signatures in None (and outside the cooldown) are eligible to be enqueued for diagnosis.</description>
+    <inlineHelpText>Whether this signature has been queued, diagnosed, or failed diagnosis.</inlineHelpText>
+    <type>Picklist</type>
+    <required>false</required>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>None</fullName>
+                <default>true</default>
+                <label>None</label>
+            </value>
+            <value>
+                <fullName>Queued</fullName>
+                <default>false</default>
+                <label>Queued</label>
+            </value>
+            <value>
+                <fullName>Diagnosing</fullName>
+                <default>false</default>
+                <label>Diagnosing</label>
+            </value>
+            <value>
+                <fullName>Diagnosed</fullName>
+                <default>false</default>
+                <label>Diagnosed</label>
+            </value>
+            <value>
+                <fullName>Failed</fullName>
+                <default>false</default>
+                <label>Failed</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

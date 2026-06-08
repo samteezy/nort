@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Parsed_Exception_Type__c</fullName>
+    <label>Parsed Exception Type</label>
+    <description>The exception class parsed from the notification (e.g. System.NullPointerException). A component of the fingerprint key.</description>
+    <inlineHelpText>The exception type extracted from the error text.</inlineHelpText>
+    <type>Text</type>
+    <length>255</length>
+    <required>false</required>
+</CustomField>

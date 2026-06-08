@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Active__c</fullName>
+    <label>Active</label>
+    <description>Whether this exclusion rule is enforced. Lets an admin disable a rule without deleting it.</description>
+    <inlineHelpText>Uncheck to temporarily disable this exclusion rule.</inlineHelpText>
+    <type>Checkbox</type>
+    <defaultValue>true</defaultValue>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

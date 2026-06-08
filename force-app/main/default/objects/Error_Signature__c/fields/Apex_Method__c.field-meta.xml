@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Apex_Method__c</fullName>
+    <label>Apex Method</label>
+    <description>The failing method for this signature, copied from the representative event. Part of the fingerprint key (line/column excluded).</description>
+    <inlineHelpText>The method associated with this signature.</inlineHelpText>
+    <type>Text</type>
+    <length>255</length>
+    <required>false</required>
+</CustomField>

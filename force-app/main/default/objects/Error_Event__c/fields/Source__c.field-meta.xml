@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Source__c</fullName>
+    <label>Source</label>
+    <description>Discriminator identifying which feed produced this error notification. Drives source-aware parsing and fingerprinting.</description>
+    <inlineHelpText>The system that emitted this error (Apex exception email, Flow fault, or platform-event log).</inlineHelpText>
+    <type>Picklist</type>
+    <required>false</required>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Apex</fullName>
+                <default>true</default>
+                <label>Apex</label>
+            </value>
+            <value>
+                <fullName>Flow</fullName>
+                <default>false</default>
+                <label>Flow</label>
+            </value>
+            <value>
+                <fullName>PlatformEvent</fullName>
+                <default>false</default>
+                <label>Platform Event</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

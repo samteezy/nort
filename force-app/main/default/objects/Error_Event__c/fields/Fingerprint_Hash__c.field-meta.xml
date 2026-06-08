@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Fingerprint_Hash__c</fullName>
+    <label>Fingerprint Hash</label>
+    <description>SHA-256 hex of the normalized fingerprint key for this occurrence. Not unique on the event (many events share a fingerprint); used to group events onto their Error Signature.</description>
+    <inlineHelpText>The computed fingerprint that groups this event with identical errors. Set by the system.</inlineHelpText>
+    <type>Text</type>
+    <length>64</length>
+    <required>false</required>
+    <externalId>true</externalId>
+    <unique>false</unique>
+</CustomField>

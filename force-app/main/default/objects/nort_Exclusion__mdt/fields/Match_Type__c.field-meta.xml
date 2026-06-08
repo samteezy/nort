@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Match_Type__c</fullName>
+    <label>Match Type</label>
+    <description>How Match Value is compared to the failing class: a leading-prefix match, a namespace match, or an exact class-name match.</description>
+    <inlineHelpText>How to compare the match value to the failing class.</inlineHelpText>
+    <type>Picklist</type>
+    <required>true</required>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>ClassPrefix</fullName>
+                <default>true</default>
+                <label>Class Prefix</label>
+            </value>
+            <value>
+                <fullName>Namespace</fullName>
+                <default>false</default>
+                <label>Namespace</label>
+            </value>
+            <value>
+                <fullName>ExactClass</fullName>
+                <default>false</default>
+                <label>Exact Class</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

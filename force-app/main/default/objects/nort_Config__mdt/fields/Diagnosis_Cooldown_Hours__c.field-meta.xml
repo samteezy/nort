@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Diagnosis_Cooldown_Hours__c</fullName>
+    <label>Diagnosis Cooldown Hours</label>
+    <description>Minimum hours between agent diagnoses of the same signature. Enforces "at most once per window" and suppresses re-diagnosis of recurrences (including recurrence after case close).</description>
+    <inlineHelpText>Minimum hours before the same signature can be diagnosed again (e.g. 24).</inlineHelpText>
+    <type>Number</type>
+    <precision>18</precision>
+    <scale>0</scale>
+    <required>true</required>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

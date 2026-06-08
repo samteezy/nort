@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Apex_Class__c</fullName>
+    <label>Apex Class</label>
+    <description>The failing Apex class parsed from the innermost stack frame. A component of the Apex fingerprint key and the entry point for scoped source retrieval.</description>
+    <inlineHelpText>The Apex class where the error originated.</inlineHelpText>
+    <type>Text</type>
+    <length>255</length>
+    <required>false</required>
+</CustomField>

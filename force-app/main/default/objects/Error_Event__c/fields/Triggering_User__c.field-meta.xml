@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Triggering_User__c</fullName>
+    <label>Triggering User</label>
+    <description>The user who triggered the error, when it can be parsed from the notification. Frequently null for Apex exception emails, which is an expected outcome rather than a failure.</description>
+    <inlineHelpText>The user whose action caused the error, if identifiable from the notification.</inlineHelpText>
+    <type>Lookup</type>
+    <referenceTo>User</referenceTo>
+    <relationshipLabel>Triggered Error Events</relationshipLabel>
+    <relationshipName>Triggered_Error_Events</relationshipName>
+    <required>false</required>
+    <deleteConstraint>SetNull</deleteConstraint>
+</CustomField>

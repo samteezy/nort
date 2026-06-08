@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Recommendation__c</fullName>
+    <label>Recommendation</label>
+    <description>The agent's recommended fix for this signature. Copied onto the mapped case alongside the root cause.</description>
+    <inlineHelpText>The recommended fix for this error, produced by the agent.</inlineHelpText>
+    <type>LongTextArea</type>
+    <length>32768</length>
+    <visibleLines>8</visibleLines>
+</CustomField>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Exception_Type__c</fullName>
+    <label>Exception Type</label>
+    <description>The exception class for this signature (e.g. System.NullPointerException). Part of the fingerprint key and useful context for the agent.</description>
+    <inlineHelpText>The exception type associated with this signature.</inlineHelpText>
+    <type>Text</type>
+    <length>255</length>
+    <required>false</required>
+</CustomField>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Case_Queue_DeveloperName__c</fullName>
+    <label>Case Queue Developer Name</label>
+    <description>Developer name of the internal queue that owns auto-created cases. Keeps automated cases off real agents' queues and out of SLA/CSAT metrics.</description>
+    <inlineHelpText>Developer name of the queue that owns auto-created error cases.</inlineHelpText>
+    <type>Text</type>
+    <length>255</length>
+    <required>false</required>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

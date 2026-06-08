@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Signature__c</fullName>
+    <label>Signature</label>
+    <description>The Error Signature this occurrence was deduplicated onto. Set by the dedup batch after grouping by fingerprint.</description>
+    <inlineHelpText>The unique error signature this occurrence belongs to.</inlineHelpText>
+    <type>Lookup</type>
+    <referenceTo>Error_Signature__c</referenceTo>
+    <relationshipLabel>Error Events</relationshipLabel>
+    <relationshipName>Error_Events</relationshipName>
+    <required>false</required>
+    <deleteConstraint>SetNull</deleteConstraint>
+</CustomField>

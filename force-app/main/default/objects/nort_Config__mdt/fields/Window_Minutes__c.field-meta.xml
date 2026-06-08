@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Window_Minutes__c</fullName>
+    <label>Window Minutes</label>
+    <description>Cadence of the dedup/throttle heartbeat in minutes. The self-rescheduling scheduler reads this each cycle to schedule its next run, so it can be retuned in Setup without a code change.</description>
+    <inlineHelpText>How often the dedup batch runs, in minutes (e.g. 5).</inlineHelpText>
+    <type>Number</type>
+    <precision>18</precision>
+    <scale>0</scale>
+    <required>true</required>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

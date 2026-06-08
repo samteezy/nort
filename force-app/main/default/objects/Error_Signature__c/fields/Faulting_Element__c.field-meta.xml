@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Faulting_Element__c</fullName>
+    <label>Faulting Element</label>
+    <description>The flow element that faulted for this signature. Part of the Flow fingerprint key. Populated only for Flow-sourced signatures.</description>
+    <inlineHelpText>The flow element associated with this signature (Flow source only).</inlineHelpText>
+    <type>Text</type>
+    <length>255</length>
+    <required>false</required>
+</CustomField>

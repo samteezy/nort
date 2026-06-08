@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>From_Address__c</fullName>
+    <label>From Address</label>
+    <description>Sender of the inbound notification email. Used for triage and to help distinguish platform-generated mail from other sources.</description>
+    <inlineHelpText>The email address that sent this error notification.</inlineHelpText>
+    <type>Email</type>
+    <required>false</required>
+    <unique>false</unique>
+</CustomField>

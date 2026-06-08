@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Last_Seen__c</fullName>
+    <label>Last Seen</label>
+    <description>Timestamp this fingerprint was most recently observed. Updated by the dedup batch each window the signature recurs.</description>
+    <inlineHelpText>When this error signature was most recently seen.</inlineHelpText>
+    <type>DateTime</type>
+    <required>false</required>
+</CustomField>

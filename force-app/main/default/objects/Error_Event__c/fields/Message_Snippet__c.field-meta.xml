@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Message_Snippet__c</fullName>
+    <label>Message Snippet</label>
+    <description>The normalized leading message snippet (volatile tokens stripped) used as the message component of the fingerprint key. Truncated to the configured snippet length.</description>
+    <inlineHelpText>The normalized error message used for fingerprinting (IDs, numbers, and quoted values removed).</inlineHelpText>
+    <type>LongTextArea</type>
+    <length>4096</length>
+    <visibleLines>3</visibleLines>
+</CustomField>

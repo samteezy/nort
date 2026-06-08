@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Agent_API_Name__c</fullName>
+    <label>Agent API Name</label>
+    <description>API name of the Agentforce agent invoked for diagnosis. Configurable so the loop can be pointed at a different agent without redeploying Apex.</description>
+    <inlineHelpText>The API name of the diagnosis agent (from the agent detail page in Setup).</inlineHelpText>
+    <type>Text</type>
+    <length>255</length>
+    <required>false</required>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

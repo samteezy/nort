@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Status_Reason__c</fullName>
+    <label>Status Reason</label>
+    <description>Human-readable explanation for the current status, especially for ParseError, Excluded, Deferred, and Failed states. Aids triage without opening the raw payload.</description>
+    <inlineHelpText>Why the event is in its current status (e.g. which exclusion rule matched, or the parse error detail).</inlineHelpText>
+    <type>Text</type>
+    <length>255</length>
+    <required>false</required>
+</CustomField>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Agent_Invocation_Count__c</fullName>
+    <label>Agent Invocation Count</label>
+    <description>How many times the Agentforce agent has been invoked for this signature. The auditable spend ledger; the storm-simulation test asserts this equals the number of unique signatures, not total events.</description>
+    <inlineHelpText>Number of Agentforce diagnoses run for this signature (credit-spend ledger).</inlineHelpText>
+    <type>Number</type>
+    <precision>18</precision>
+    <scale>0</scale>
+    <defaultValue>0</defaultValue>
+    <required>false</required>
+</CustomField>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Message_Template__c</fullName>
+    <label>Message Template</label>
+    <description>The normalized message snippet (volatile tokens stripped) that, with class/method/type, produced this fingerprint. Stored for human readability and agent grounding.</description>
+    <inlineHelpText>The normalized error message that defines this signature.</inlineHelpText>
+    <type>LongTextArea</type>
+    <length>4096</length>
+    <visibleLines>3</visibleLines>
+</CustomField>

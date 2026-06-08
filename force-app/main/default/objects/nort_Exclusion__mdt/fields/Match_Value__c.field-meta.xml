@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Match_Value__c</fullName>
+    <label>Match Value</label>
+    <description>The class-name prefix, namespace, or exact class name to exclude from ingestion. The self-exclusion loop guard: prevents this solution's own errors (and other noise) from feeding back into the pipeline.</description>
+    <inlineHelpText>The value to match against the failing class (e.g. the prefix "Nort").</inlineHelpText>
+    <type>Text</type>
+    <length>255</length>
+    <required>true</required>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

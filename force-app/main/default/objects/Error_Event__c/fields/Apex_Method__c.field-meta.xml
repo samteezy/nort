@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Apex_Method__c</fullName>
+    <label>Apex Method</label>
+    <description>The failing method parsed from the innermost stack frame. Part of the fingerprint key. Line and column are deliberately excluded because they shift on every deploy.</description>
+    <inlineHelpText>The method within the Apex class where the error originated.</inlineHelpText>
+    <type>Text</type>
+    <length>255</length>
+    <required>false</required>
+</CustomField>

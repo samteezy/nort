@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Snippet_Length__c</fullName>
+    <label>Snippet Length</label>
+    <description>Number of leading characters of the normalized message retained for the fingerprint key. Tunable to balance fingerprint specificity against fragmentation.</description>
+    <inlineHelpText>Characters of the normalized message used for fingerprinting (e.g. 200).</inlineHelpText>
+    <type>Number</type>
+    <precision>18</precision>
+    <scale>0</scale>
+    <required>true</required>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>
