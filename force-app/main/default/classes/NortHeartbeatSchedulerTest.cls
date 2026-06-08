@@ -6,8 +6,8 @@
 private class NortHeartbeatSchedulerTest {
     @isTest
     static void shouldBuildCron_ForGivenTime() {
-        Datetime when = Datetime.newInstance(2026, 6, 8, 10, 30, 15);
-        String cron = NortHeartbeatScheduler.toCron(when);
+        Datetime fireTime = Datetime.newInstance(2026, 6, 8, 10, 30, 15);
+        String cron = NortHeartbeatScheduler.toCron(fireTime);
         Assert.isTrue(cron.endsWith('2026'), 'Cron should end with the year.');
         Assert.isTrue(cron.contains('?'), 'Cron should use ? for day-of-week.');
     }
@@ -25,9 +25,11 @@ private class NortHeartbeatSchedulerTest {
     static void shouldScheduleAndStop() {
         NortConfig.configOverride = TestDataFactory.config();
 
-        Test.startTest();
+        // start() is intentionally NOT wrapped in Test.stopTest(): the heartbeat is
+        // scheduled one window in the future, and a stopTest() flush would fire it,
+        // whose execute() reschedules-and-aborts itself, leaving nothing to assert.
+        // System.schedule commits the CronTrigger synchronously, so it is queryable.
         NortHeartbeatScheduler.start();
-        Test.stopTest();
 
         Integer scheduled = [SELECT COUNT() FROM CronTrigger WHERE CronJobDetail.Name LIKE 'Nort Error Heartbeat%'];
         Assert.areEqual(1, scheduled, 'start() should schedule exactly one heartbeat job.');

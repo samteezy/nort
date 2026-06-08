@@ -10,6 +10,14 @@
  * org's published agent action in Summer '26.
  */
 public with sharing class NortAgentInvoker {
+    // Integration seam constants — verify against the org's published action.
+    // Declared on the top-level class because Apex forbids static members on
+    // inner classes; AgentforceClient (an inner class) references them directly.
+    private static final String AGENT_ACTION_TYPE = 'generateAiAgentResponse';
+    private static final String PARAM_AGENT = 'agentApiName';
+    private static final String PARAM_MESSAGE = 'userMessage';
+    private static final String OUTPUT_RESPONSE = 'agentResponse';
+
     /** Structured diagnosis request derived from an Error Signature. */
     public class DiagnosisRequest {
         public Id signatureId;
@@ -75,12 +83,6 @@ public with sharing class NortAgentInvoker {
      * Default client that invokes the Agentforce agent headlessly.
      */
     public with sharing class AgentforceClient implements Client {
-        // Integration seam constants — verify against the org's published action.
-        private static final String AGENT_ACTION_TYPE = 'generateAiAgentResponse';
-        private static final String PARAM_AGENT = 'agentApiName';
-        private static final String PARAM_MESSAGE = 'userMessage';
-        private static final String OUTPUT_RESPONSE = 'agentResponse';
-
         public DiagnosisResult diagnose(DiagnosisRequest request) {
             DiagnosisResult result = new DiagnosisResult();
             String agentApiName = NortConfig.agentApiName();

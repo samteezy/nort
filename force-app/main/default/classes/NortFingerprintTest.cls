@@ -16,7 +16,7 @@ private class NortFingerprintTest {
 
     @isTest
     static void shouldStripRecordIds_WhenNormalizing() {
-        String result = NortFingerprint.normalizeMessage('Bad id 001A000000ABCDEFGHI here', 200);
+        String result = NortFingerprint.normalizeMessage('Bad id 001A00000ABCDEFGHI here', 200);
         Assert.areEqual('Bad id {id} here', result, 'An 18-char record id should be replaced with {id}.');
     }
 
@@ -52,10 +52,10 @@ private class NortFingerprintTest {
     @isTest
     static void shouldHashEqual_WhenOnlyVolatileTokensDiffer() {
         NortFingerprint.FingerprintResult first = NortFingerprint.compute(
-            apexInput('Null at row 12 for id 001A000000ABCDEFGHI')
+            apexInput('Null at row 12 for id 001A00000ABCDEFGHI')
         );
         NortFingerprint.FingerprintResult second = NortFingerprint.compute(
-            apexInput('Null at row 999 for id 001A000000ZYXWVUTSR')
+            apexInput('Null at row 999 for id 001A00000ZYXWVUTSR')
         );
         Assert.areEqual(first.hash, second.hash, 'Messages differing only by volatile tokens must collapse to one hash.');
     }

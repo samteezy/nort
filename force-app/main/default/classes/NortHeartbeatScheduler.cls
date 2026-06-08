@@ -91,11 +91,11 @@ public with sharing class NortHeartbeatScheduler implements Schedulable {
      * formatted in the running user's timezone to match how System.schedule
      * interprets the expression.
      *
-     * @param when The target fire time.
+     * @param fireTime The target fire time.
      * @return A Salesforce cron expression.
      */
     @TestVisible
-    private static String toCron(Datetime when) {
-        return when.format('ss mm HH dd MM') + ' ? ' + when.format('yyyy');
+    private static String toCron(Datetime fireTime) {
+        return fireTime.format('ss mm HH dd MM') + ' ? ' + fireTime.format('yyyy');
     }
 }

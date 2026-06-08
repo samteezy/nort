@@ -51,10 +51,12 @@ private class NortDedupBatchTest {
     static void shouldMarkSignaturesQueued_WhenNewAndEligible() {
         NortConfig.configOverride = TestDataFactory.config();
 
+        // Invoke execute() directly to isolate the dedup gate: going through
+        // Database.executeBatch would let finish() dispatch the diagnosis
+        // Queueable, which runs during stopTest() and would dequeue one signature.
+        // The end-to-end batch+dispatch path is covered by the headline test.
         Test.startTest();
-        // Run the batch only; the finish-dispatched queueable does not execute in-test,
-        // so signatures remain in the Queued state set by the dedup gate.
-        Database.executeBatch(new NortDedupBatch(), 2000);
+        new NortDedupBatch().execute(null, parsedEvents());
         Test.stopTest();
 
         Integer queued = [SELECT COUNT() FROM Error_Signature__c WHERE Diagnosis_Status__c = 'Queued'];
@@ -66,7 +68,7 @@ private class NortDedupBatchTest {
         NortConfig.configOverride = TestDataFactory.config();
 
         Test.startTest();
-        Database.executeBatch(new NortDedupBatch(), 2000);
+        new NortDedupBatch().execute(null, parsedEvents());
         Test.stopTest();
 
         Integer representatives = [SELECT COUNT() FROM Error_Event__c WHERE Status__c = 'Representative'];
@@ -82,13 +84,25 @@ private class NortDedupBatchTest {
         NortConfig.configOverride = config;
 
         Test.startTest();
-        Database.executeBatch(new NortDedupBatch(), 2000);
+        new NortDedupBatch().execute(null, parsedEvents());
         Test.stopTest();
 
         Integer queued = [SELECT COUNT() FROM Error_Signature__c WHERE Diagnosis_Status__c = 'Queued'];
         Integer deferred = [SELECT COUNT() FROM Error_Event__c WHERE Status__c = 'Deferred'];
         Assert.areEqual(2, queued, 'Only the capped number of signatures should be Queued.');
         Assert.isTrue(deferred > 0, 'Over-cap fingerprints should defer their events for a later window.');
+    }
+
+    /** The staged Parsed events, ordered as NortDedupBatch.start() would select them. */
+    private static List<Error_Event__c> parsedEvents() {
+        return [
+            SELECT Id, Fingerprint_Hash__c, Source__c, Apex_Class__c, Apex_Method__c,
+                   Parsed_Exception_Type__c, Flow_API_Name__c, Faulting_Element__c,
+                   Message_Snippet__c, Received_At__c
+            FROM Error_Event__c
+            WHERE Status__c = 'Parsed' AND Fingerprint_Hash__c != null
+            ORDER BY Received_At__c ASC
+        ];
     }
 
     /** Minimal mock so any dispatched diagnosis does not hit a real agent. */

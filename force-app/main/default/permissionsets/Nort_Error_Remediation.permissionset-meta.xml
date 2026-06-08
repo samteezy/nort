@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
     <label>Nort Error Remediation</label>
-    <description>Access for the nort error remediation loop's integration/agent running user: full access to the staging objects, Author Apex so agent actions can read ApexClass.Body, and the automated-error Case record type. Assign to the user context that runs the batch, queueables, and agent actions.</description>
+    <description>Access for nort's integration/agent running user: full access to the staging objects, Author Apex (so actions can read ApexClass.Body), and the automated-error Case record type. Assign to the user running the batch, queueables, and agent actions.</description>
     <hasActivationRequired>false</hasActivationRequired>
     <objectPermissions>
         <object>Error_Event__c</object>
@@ -31,10 +31,23 @@
         <enabled>true</enabled>
         <name>AuthorApex</name>
     </userPermissions>
+    <!-- AuthorApex (needed so agent actions can read ApexClass.Body) requires
+         these dependent permissions in Summer '26. -->
+    <userPermissions>
+        <enabled>true</enabled>
+        <name>ModifyMetadata</name>
+    </userPermissions>
+    <userPermissions>
+        <enabled>true</enabled>
+        <name>ViewRoles</name>
+    </userPermissions>
+    <userPermissions>
+        <enabled>true</enabled>
+        <name>ViewSetup</name>
+    </userPermissions>
     <recordTypeVisibilities>
         <recordType>Case.Nort_Automated_Error</recordType>
         <visible>true</visible>
-        <default>false</default>
     </recordTypeVisibilities>
     <classAccesses>
         <apexClass>NortConstants</apexClass>
