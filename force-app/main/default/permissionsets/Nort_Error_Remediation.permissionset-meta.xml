@@ -23,6 +23,14 @@
         <viewAllRecords>true</viewAllRecords>
         <viewAllFields>true</viewAllFields>
     </objectPermissions>
+    <tabSettings>
+        <tab>Error_Event__c</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
+        <tab>Error_Signature__c</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
     <userPermissions>
         <enabled>true</enabled>
         <name>ApiEnabled</name>
