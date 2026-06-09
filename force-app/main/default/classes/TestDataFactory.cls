@@ -97,4 +97,67 @@ public class TestDataFactory {
             new nort_Exclusion__mdt(Match_Value__c = prefix, Match_Type__c = 'ClassPrefix', Active__c = true)
         };
     }
+
+    /**
+     * In-memory NortCaseService.CaseGateway for tests: captures Case/CaseComment
+     * writes and serves seeded existing cases, so tests never perform real Case
+     * DML (which would fire the target org's Case automation). Inject via
+     * NortCaseService.setGateway(...) and assert against the public capture lists.
+     */
+    public class CaseGatewayStub implements NortCaseService.CaseGateway {
+        public Map<Id, Case> store = new Map<Id, Case>();
+        public List<Case> insertedCases = new List<Case>();
+        public List<CaseComment> insertedComments = new List<CaseComment>();
+        public List<Error_Signature__c> updatedSignatures = new List<Error_Signature__c>();
+        private Integer counter = 1;
+
+        /**
+         * Seeds an existing case in the given open/closed state.
+         *
+         * @param isClosed Whether the seeded case is closed.
+         * @return The synthetic Id of the seeded case.
+         */
+        public Id seedExisting(Boolean isClosed) {
+            Id caseId = nextCaseId();
+            // IsClosed is non-writable; set it via JSON to simulate state.
+            Case existing = (Case) JSON.deserialize(
+                '{"attributes":{"type":"Case"},"Id":"' + caseId + '","IsClosed":' + isClosed + '}',
+                Case.class
+            );
+            store.put(caseId, existing);
+            return caseId;
+        }
+
+        public Map<Id, Case> findCasesByIds(Set<Id> caseIds) {
+            Map<Id, Case> found = new Map<Id, Case>();
+            for (Id caseId : caseIds) {
+                if (store.containsKey(caseId)) {
+                    found.put(caseId, store.get(caseId));
+                }
+            }
+            return found;
+        }
+
+        public void insertCases(List<Case> cases) {
+            for (Case record : cases) {
+                record.Id = nextCaseId();
+                store.put(record.Id, record);
+                insertedCases.add(record);
+            }
+        }
+
+        public void insertComments(List<CaseComment> comments) {
+            insertedComments.addAll(comments);
+        }
+
+        public void updateSignatures(List<Error_Signature__c> signatures) {
+            updatedSignatures.addAll(signatures);
+        }
+
+        private Id nextCaseId() {
+            String suffix = String.valueOf(counter++);
+            String body = '0'.repeat(12 - suffix.length()) + suffix;
+            return Id.valueOf(Case.SObjectType.getDescribe().getKeyPrefix() + body);
+        }
+    }
 }

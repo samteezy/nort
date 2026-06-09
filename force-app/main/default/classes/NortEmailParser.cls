@@ -35,8 +35,11 @@ public with sharing class NortEmailParser {
     private static final String RE_CLASS_FRAME = '(?i)Class\\.([\\w.<>$ ]+?):\\s*line\\s*\\d+';
     private static final String RE_TRIGGER_FRAME = '(?i)Trigger\\.([\\w]+):\\s*line\\s*\\d+';
     private static final String RE_USER_ID = '(?i)user/organization/(005[A-Za-z0-9]{12,15})';
-    private static final String RE_FLOW_API = '(?i)Flow API Name[:\\s]+([A-Za-z0-9_]+)';
-    private static final String RE_FLOW_ELEMENT = '(?i)error occurred at element[:\\s]+([A-Za-z0-9_]+)';
+    // Tolerate the real Salesforce flow-fault email format: bold labels render as
+    // "*Flow API Name: *FlowErrorDemo" (asterisks), and the faulting element appears
+    // as "Error element X (Type)" as well as the older "error occurred at element X".
+    private static final String RE_FLOW_API = '(?i)Flow API Name[:\\s\\*]+([A-Za-z0-9_]+)';
+    private static final String RE_FLOW_ELEMENT = '(?i)error(?:\\s+occurred\\s+at)?\\s+element[:\\s\\*]+([A-Za-z0-9_]+)';
 
     /** Structured result of parsing an inbound notification. */
     public class ParsedError {

@@ -15,11 +15,23 @@ public with sharing class NortDiagnosisQueueable implements Queueable, Database.
      * @return The enqueued job Id, or null if enqueuing was skipped.
      */
     public static Id dispatch() {
+        // Singleton guard: the agent callout cannot run after DML in the same
+        // transaction, so this queueable must do its callout first — which means
+        // no per-record "Diagnosing" soft lock. Instead we ensure only one drain
+        // chain exists at a time, so two chains can never charge the same signature.
+        if (diagnosisJobAlreadyActive()) {
+            return null;
+        }
         return System.enqueueJob(new NortDiagnosisQueueable());
     }
 
     /**
      * Processes the next Queued signature, then chains if more remain.
+     *
+     * The agent invocation (a callout) runs BEFORE any DML so the transaction
+     * has no pending uncommitted work when it fires — otherwise the platform
+     * rejects the callout with "pending uncommitted work". All persistence
+     * happens afterward in applyResult.
      *
      * @param context The queueable context.
      */
@@ -29,17 +41,35 @@ public with sharing class NortDiagnosisQueueable implements Queueable, Database.
             return;
         }
 
-        markDiagnosing(signature);
         NortAgentInvoker.DiagnosisResult diagnosis = NortAgentInvoker.diagnose(toRequest(signature));
         applyResult(signature, diagnosis);
 
         chainIfMoreRemain();
     }
 
+    /**
+     * True when a NortDiagnosisQueueable drain chain is already enqueued or
+     * running. Used by dispatch() to keep the chain a singleton; the in-flight
+     * chain (which enqueues its own continuation directly) is intentionally not
+     * gated by this.
+     *
+     * @return Whether a non-terminal NortDiagnosisQueueable job exists.
+     */
+    private static Boolean diagnosisJobAlreadyActive() {
+        return 0 < [
+            SELECT COUNT()
+            FROM AsyncApexJob
+            WHERE JobType = 'Queueable'
+            AND ApexClass.Name = 'NortDiagnosisQueueable'
+            AND Status IN ('Holding', 'Queued', 'Preparing', 'Processing')
+            WITH SYSTEM_MODE
+        ];
+    }
+
     private Error_Signature__c nextQueuedSignature() {
         List<Error_Signature__c> queued = [
             SELECT Id, Source__c, Apex_Class__c, Apex_Method__c, Exception_Type__c,
-                   Message_Template__c, Flow_API_Name__c, Faulting_Element__c,
+                   Message_Template__c, Raw_Sample__c, Flow_API_Name__c, Faulting_Element__c,
                    Fingerprint_Hash__c, Occurrence_Count__c, Agent_Invocation_Count__c,
                    Case__c, Root_Cause__c, Recommendation__c
             FROM Error_Signature__c
@@ -51,11 +81,6 @@ public with sharing class NortDiagnosisQueueable implements Queueable, Database.
         return queued.isEmpty() ? null : queued[0];
     }
 
-    private void markDiagnosing(Error_Signature__c signature) {
-        signature.Diagnosis_Status__c = NortConstants.DIAG_DIAGNOSING;
-        Database.update(signature, true, AccessLevel.SYSTEM_MODE);
-    }
-
     private NortAgentInvoker.DiagnosisRequest toRequest(Error_Signature__c signature) {
         NortAgentInvoker.DiagnosisRequest request = new NortAgentInvoker.DiagnosisRequest();
         request.signatureId = signature.Id;
@@ -64,6 +89,7 @@ public with sharing class NortDiagnosisQueueable implements Queueable, Database.
         request.methodName = signature.Apex_Method__c;
         request.exceptionType = signature.Exception_Type__c;
         request.messageTemplate = signature.Message_Template__c;
+        request.rawMessage = signature.Raw_Sample__c;
         request.flowApiName = signature.Flow_API_Name__c;
         request.faultingElement = signature.Faulting_Element__c;
         return request;

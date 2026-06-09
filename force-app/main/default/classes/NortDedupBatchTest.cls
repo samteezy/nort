@@ -24,6 +24,9 @@ private class NortDedupBatchTest {
     static void shouldCollapseStormToUniqueSignatures_BeforeAnySpend() {
         NortConfig.configOverride = TestDataFactory.config();
         NortAgentInvoker.setClient(new MockAgentClient());
+        // finish() dispatches the diagnosis Queueable (runs during stopTest), which
+        // routes to a case; mock Case DML so it never hits the org's Case automation.
+        NortCaseService.setGateway(new TestDataFactory.CaseGatewayStub());
 
         Test.startTest();
         Database.executeBatch(new NortDedupBatch(), 2000);
@@ -93,12 +96,41 @@ private class NortDedupBatchTest {
         Assert.isTrue(deferred > 0, 'Over-cap fingerprints should defer their events for a later window.');
     }
 
+    @isTest
+    static void shouldCarryRawSampleAndDegradedFlag_WhenSignatureFormed() {
+        NortConfig.configOverride = TestDataFactory.config();
+        String degradedFp = 'd'.repeat(64);
+        insert new Error_Event__c(
+            Status__c = 'Parsed',
+            Source__c = 'Flow',
+            Fingerprint_Hash__c = degradedFp,
+            Message_Snippet__c = 'coarse normalized body',
+            Raw_Payload__c = 'VERBATIM raw flow fault email the parser could not structure',
+            Parse_Degraded__c = true,
+            Received_At__c = System.now()
+        );
+
+        Test.startTest();
+        new NortDedupBatch().execute(null, parsedEvents());
+        Test.stopTest();
+
+        Error_Signature__c signature = [
+            SELECT Raw_Sample__c, Parse_Degraded__c FROM Error_Signature__c
+            WHERE Fingerprint_Hash__c = :degradedFp
+        ];
+        Assert.isTrue(signature.Parse_Degraded__c, 'A degraded event should produce a degraded-flagged signature.');
+        Assert.isTrue(
+            signature.Raw_Sample__c.contains('VERBATIM'),
+            'The representative raw payload should be carried onto the signature for the agent.'
+        );
+    }
+
     /** The staged Parsed events, ordered as NortDedupBatch.start() would select them. */
     private static List<Error_Event__c> parsedEvents() {
         return [
             SELECT Id, Fingerprint_Hash__c, Source__c, Apex_Class__c, Apex_Method__c,
                    Parsed_Exception_Type__c, Flow_API_Name__c, Faulting_Element__c,
-                   Message_Snippet__c, Received_At__c
+                   Message_Snippet__c, Raw_Payload__c, Parse_Degraded__c, Received_At__c
             FROM Error_Event__c
             WHERE Status__c = 'Parsed' AND Fingerprint_Hash__c != null
             ORDER BY Received_At__c ASC

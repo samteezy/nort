@@ -53,20 +53,47 @@ private class NortIngestionServiceTest {
     }
 
     @isTest
-    static void shouldStageParseError_WhenUnrecognized() {
+    static void shouldDegradeNotDeadEnd_WhenUnrecognizedButHasBody() {
         NortConfig.configOverride = TestDataFactory.config();
 
         Test.startTest();
         List<Error_Event__c> events = NortIngestionService.publish(
             new List<NortIngestionService.RawNotification>{
-                new NortIngestionService.RawNotification('Newsletter', 'marketing@x.com', 'nothing useful here')
+                new NortIngestionService.RawNotification('Unfamiliar format', 'noreply@salesforce.com', 'some error text the parser cannot structure')
             }
         );
         Test.stopTest();
 
-        Error_Event__c staged = [SELECT Status__c, Status_Reason__c FROM Error_Event__c WHERE Id = :events[0].Id];
-        Assert.areEqual('ParseError', staged.Status__c, 'Unrecognized content should stage as ParseError, not be lost.');
-        Assert.isNotNull(staged.Status_Reason__c, 'A parse error reason should be recorded.');
+        Error_Event__c staged = [
+            SELECT Status__c, Status_Reason__c, Parse_Degraded__c, Fingerprint_Hash__c, Message_Snippet__c
+            FROM Error_Event__c WHERE Id = :events[0].Id
+        ];
+        // Graceful degradation: still dedup-eligible (Parsed + fingerprint), not a silent dead-end.
+        Assert.areEqual('Parsed', staged.Status__c, 'An unparseable-but-bodied email should degrade to Parsed, not dead-end.');
+        Assert.isTrue(staged.Parse_Degraded__c, 'The degraded flag should be set for visibility.');
+        Assert.isNotNull(staged.Fingerprint_Hash__c, 'A fallback fingerprint should be assigned so dedup picks it up.');
+        Assert.isNotNull(staged.Status_Reason__c, 'The parse failure reason should still be recorded.');
+    }
+
+    @isTest
+    static void shouldStageParseError_WhenBodyBlank() {
+        NortConfig.configOverride = TestDataFactory.config();
+
+        Test.startTest();
+        List<Error_Event__c> events = NortIngestionService.publish(
+            new List<NortIngestionService.RawNotification>{
+                new NortIngestionService.RawNotification('Newsletter', 'marketing@x.com', '')
+            }
+        );
+        Test.stopTest();
+
+        Error_Event__c staged = [
+            SELECT Status__c, Parse_Degraded__c, Fingerprint_Hash__c FROM Error_Event__c WHERE Id = :events[0].Id
+        ];
+        // No body to fingerprint → genuinely unusable, stays terminal (but still captured).
+        Assert.areEqual('ParseError', staged.Status__c, 'A blank-body email has nothing to fingerprint and stays ParseError.');
+        Assert.isTrue(staged.Parse_Degraded__c, 'The degraded flag should still mark it.');
+        Assert.isNull(staged.Fingerprint_Hash__c, 'No fingerprint without a body.');
     }
 
     @isTest

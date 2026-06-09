@@ -94,6 +94,37 @@ private class NortFingerprintTest {
         );
     }
 
+    private static NortFingerprint.FingerprintInput fallbackInput(String source, String body) {
+        // Mirrors NortIngestionService's degraded path: structured fields null, body only.
+        NortFingerprint.FingerprintInput input = new NortFingerprint.FingerprintInput();
+        input.source = source;
+        input.rawMessage = body;
+        return input;
+    }
+
+    @isTest
+    static void shouldProduceStableFallbackHash_WhenStructuredFieldsAbsent() {
+        // Same body (only volatile tokens differ) → same coarse fingerprint, so a storm of
+        // unparseable-but-identical emails still collapses to one signature.
+        NortFingerprint.FingerprintResult first = NortFingerprint.compute(
+            fallbackInput('Unknown', 'Error in record 001A00000ABCDEFGHI at 2026-06-09T10:00:00Z')
+        );
+        NortFingerprint.FingerprintResult second = NortFingerprint.compute(
+            fallbackInput('Unknown', 'Error in record 001A00000ZYXWVUTSR at 2026-06-09T11:30:00Z')
+        );
+        Assert.isNotNull(first.hash, 'A fallback fingerprint should still be produced with no structured fields.');
+        Assert.areEqual(first.hash, second.hash, 'Identical degraded bodies must collapse to one fallback hash.');
+    }
+
+    @isTest
+    static void shouldDifferFallbackHash_WhenBodiesDiffer() {
+        Assert.areNotEqual(
+            NortFingerprint.compute(fallbackInput('Unknown', 'first kind of failure')).hash,
+            NortFingerprint.compute(fallbackInput('Unknown', 'a completely different failure')).hash,
+            'Distinct degraded bodies must not collide.'
+        );
+    }
+
     @isTest
     static void shouldThrow_WhenInputNull() {
         try {

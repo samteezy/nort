@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>66.0</apiVersion>
+    <description>nort Flow-fault probe. After a Lead with LastName "flowerror" is saved, this flow updates that Lead's Description to the sentinel value the FlowErrorDemo_Guard validation rule forbids. The update fails, raising an unhandled Flow fault so Salesforce emits a Flow fault email that exercises the nort Flow ingestion path end to end. Mirrors the LeadErrorDemo Apex probe; deliberately not Nort-prefixed so its faults are not excluded by the loop guard.</description>
+    <environments>Default</environments>
+    <interviewLabel>FlowErrorDemo {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>FlowErrorDemo</label>
+    <processType>AutoLaunchedFlow</processType>
+    <recordUpdates>
+        <name>Force_Validation_Failure</name>
+        <label>Force Validation Failure</label>
+        <locationX>176</locationX>
+        <locationY>288</locationY>
+        <inputAssignments>
+            <field>Description</field>
+            <value>
+                <stringValue>NORT_FLOW_DEMO_VIOLATION</stringValue>
+            </value>
+        </inputAssignments>
+        <inputReference>$Record</inputReference>
+    </recordUpdates>
+    <start>
+        <locationX>50</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Force_Validation_Failure</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>LastName</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>flowerror</stringValue>
+            </value>
+        </filters>
+        <object>Lead</object>
+        <recordTriggerType>CreateAndUpdate</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+</Flow>

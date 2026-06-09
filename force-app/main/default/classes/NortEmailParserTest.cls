@@ -34,6 +34,28 @@ private class NortEmailParserTest {
     }
 
     @isTest
+    static void shouldParseRealFlowEmailFormat_WithBoldMarkersAndErrorElement() {
+        // Mirrors the actual Salesforce flow-fault email: bold labels render as "*...*"
+        // and the faulting element appears as "Error element X (Type)".
+        String body = 'An Error Occurred with Your "FlowErrorDemo" Flow\n\n'
+            + 'Error element Force_Validation_Failure (FlowRecordUpdate).\n'
+            + 'This error occurred: FIELD_CUSTOM_VALIDATION_EXCEPTION: deliberate failure.\n\n'
+            + 'Flow Error Details\n'
+            + 'Flow Details\n'
+            + '*Flow API Name: *FlowErrorDemo\n'
+            + '*Type: *Autolaunched Flow\n';
+
+        NortEmailParser.ParsedError parsed = NortEmailParser.parse(
+            'An error occurred with your "FlowErrorDemo" flow', body
+        );
+
+        Assert.areEqual('Flow', parsed.source, 'Real flow email should detect Flow source.');
+        Assert.isFalse(parsed.parseFailed, 'Real flow email format should parse cleanly.');
+        Assert.areEqual('FlowErrorDemo', parsed.flowApiName, 'Flow API name should parse past the bold marker.');
+        Assert.areEqual('Force_Validation_Failure', parsed.faultingElement, '"Error element X" phrasing should be extracted.');
+    }
+
+    @isTest
     static void shouldFlagParseFailed_WhenUnrecognized() {
         NortEmailParser.ParsedError parsed = NortEmailParser.parse('Newsletter', 'Just some marketing content.');
         Assert.areEqual('Unknown', parsed.source, 'Unrecognized content should be Unknown.');

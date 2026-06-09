@@ -81,8 +81,28 @@ public with sharing class NortIngestionService {
         event.Faulting_Element__c = truncate(parsed.faultingElement, SUBJECT_MAX);
 
         if (parsed.parseFailed) {
-            event.Status__c = NortConstants.EVENT_PARSE_ERROR;
+            // Graceful degradation: rather than dead-end at ParseError (which the dedup
+            // batch never picks up), fall back to a coarse, body-only fingerprint so the
+            // event still dedups and reaches the agent, which can read the raw payload.
+            // The Parse_Degraded__c flag keeps this visible (format drift, not silence).
+            // Note: the self-exclusion guard below is skipped here (no class name to match);
+            // nort's own Apex errors parse cleanly and are excluded on the normal path.
+            event.Parse_Degraded__c = true;
             event.Status_Reason__c = truncate(parsed.parseError, REASON_MAX);
+            if (String.isBlank(event.Raw_Payload__c)) {
+                // Nothing to fingerprint — genuinely unusable; keep it terminal.
+                event.Status__c = NortConstants.EVENT_PARSE_ERROR;
+                return;
+            }
+            NortFingerprint.FingerprintInput fallback = new NortFingerprint.FingerprintInput();
+            fallback.source = parsed.source;
+            fallback.rawMessage = event.Raw_Payload__c;
+            NortFingerprint.FingerprintResult degraded = NortFingerprint.compute(
+                fallback, NortConfig.snippetLength()
+            );
+            event.Fingerprint_Hash__c = degraded.hash;
+            event.Message_Snippet__c = degraded.normalizedSnippet;
+            event.Status__c = NortConstants.EVENT_PARSED;
             return;
         }
 

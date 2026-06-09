@@ -26,6 +26,27 @@ private class NortAgentInvokerTest {
     }
 
     @isTest
+    static void shouldUnwrapEnvelopedJsonResponse() {
+        // The live generateAiAgentResponse action wraps the agent reply as
+        // {"type":"Text","value":"<inner JSON string>"}; parsing must unwrap it.
+        NortAgentInvoker.DiagnosisResult result = NortAgentInvoker.parseResponse(
+            '{"type":"Text","value":"{\\"rootCause\\":\\"NPE in recalculate\\",\\"recommendation\\":\\"null-check\\"}"}'
+        );
+        Assert.isTrue(result.success, 'Enveloped JSON should parse successfully.');
+        Assert.areEqual('NPE in recalculate', result.rootCause, 'Root cause should be extracted from the envelope.');
+        Assert.areEqual('null-check', result.recommendation, 'Recommendation should be extracted from the envelope.');
+    }
+
+    @isTest
+    static void shouldUnwrapEnvelopedPlainText() {
+        NortAgentInvoker.DiagnosisResult result = NortAgentInvoker.parseResponse(
+            '{"type":"Text","value":"Just a plain explanation."}'
+        );
+        Assert.isTrue(result.success, 'Enveloped plain text should still be usable.');
+        Assert.areEqual('Just a plain explanation.', result.rootCause, 'Envelope value becomes the root cause.');
+    }
+
+    @isTest
     static void shouldTreatPlainTextAsRootCause() {
         NortAgentInvoker.DiagnosisResult result = NortAgentInvoker.parseResponse('Just a plain explanation.');
         Assert.isTrue(result.success, 'Plain text should still be a usable result.');
@@ -43,6 +64,27 @@ private class NortAgentInvokerTest {
         String prompt = NortAgentInvoker.buildPrompt(request());
         Assert.isTrue(prompt.contains('AccountService'), 'Prompt should name the failing class.');
         Assert.isTrue(prompt.contains('rootCause'), 'Prompt should instruct a JSON shape.');
+    }
+
+    @isTest
+    static void shouldIncludeRawNotification_WhenProvided() {
+        NortAgentInvoker.DiagnosisRequest req = request();
+        req.rawMessage = 'VERBATIM_RAW_EMAIL_CONTENT';
+        String prompt = NortAgentInvoker.buildPrompt(req);
+        Assert.isTrue(prompt.contains('Raw notification'), 'Prompt should include a raw notification section.');
+        Assert.isTrue(prompt.contains('VERBATIM_RAW_EMAIL_CONTENT'), 'Prompt should embed the raw payload.');
+    }
+
+    @isTest
+    static void shouldBuildSensiblePrompt_WhenDegradedWithNoStructuredFields() {
+        // Degraded request: no class/flow, only the raw notification.
+        NortAgentInvoker.DiagnosisRequest req = new NortAgentInvoker.DiagnosisRequest();
+        req.source = 'Unknown';
+        req.rawMessage = 'an unparsed error blob';
+        String prompt = NortAgentInvoker.buildPrompt(req);
+        Assert.isFalse(prompt.contains('"null"'), 'Degraded prompt must not emit a "null" target.');
+        Assert.isTrue(prompt.contains('unparsed'), 'Degraded prompt should describe an unparsed notification.');
+        Assert.isTrue(prompt.contains('an unparsed error blob'), 'Degraded prompt should carry the raw blob.');
     }
 
     @isTest
