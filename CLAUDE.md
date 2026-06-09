@@ -42,7 +42,7 @@ The Event lifecycle (`Status__c`) and Signature diagnosis lifecycle (`Diagnosis_
 
 ## Commands
 
-No default org is configured; pass `-o <alias>` explicitly (e.g. `TrailheadOrg`, the testing org, or a scratch alias).
+No default org is configured; pass `-o <alias>` explicitly (e.g. `SDO`, the testing org, or a scratch alias).
 
 ```bash
 # Deploy
