@@ -107,7 +107,7 @@ sf apex run test -o nort -l RunLocalTests -c -r human
 echo "NortHeartbeatScheduler.start();" | sf apex run -o nort
 ```
 
-Then wire the inbound side and the agent — see [`docs/AGENT_SETUP.md`](docs/AGENT_SETUP.md).
+The deploy includes the Email Service itself (`EmailServicesFunction`); only its org-specific inbound address and the agent are wired by hand — see [`docs/AGENT_SETUP.md`](docs/AGENT_SETUP.md).
 
 ## The credit-discipline proof
 

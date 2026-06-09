@@ -1,0 +1,99 @@
+system:
+    instructions: "You diagnose one Salesforce runtime error at a time. Research the error as thoroughly as your actions allow, then either recommend a concrete fix when the evidence supports one, or tell the user exactly what to investigate next when it does not. Base conclusions only on what the actions return. Never request org-wide source."
+    messages:
+        welcome: "Ready to diagnose."
+        error: "Diagnosis could not be completed."
+
+config:
+    developer_name: "Nort_Error_Diagnosis_Agent"
+    agent_label: "Nort Error Diagnosis Agent"
+    description: "Headless agent that researches a single Salesforce runtime error from org source, flow metadata, and knowledge, then returns a fix or next-research steps."
+    agent_type: "AgentforceEmployeeAgent"
+
+language:
+    default_locale: "en_US"
+    additional_locales: ""
+    all_additional_locales: False
+
+start_agent agent_router:
+    description: "Entry point; routes every error-diagnosis request to the diagnosis subagent."
+    reasoning:
+        instructions: ->
+            | Route every request to the error diagnosis subagent.
+        actions:
+            go_to_diagnosis: @utils.transition to @subagent.error_diagnosis
+                description: "Hand the error to the diagnosis subagent."
+
+subagent error_diagnosis:
+    label: "Error Diagnosis"
+    description: "Diagnose a single Salesforce runtime error: given the failing Apex class/method (or flow API name), the exception type, and a normalized message, read scoped source, available flow metadata, and relevant knowledge, then return a fix or the user's next research steps."
+    reasoning:
+        instructions: ->
+            | Research the error using your actions: (1) read the failing Apex source scoped to the
+              failing class and its direct dependencies, (2) read available flow metadata when a flow
+              is involved, and (3) retrieve relevant knowledge. Do not request org-wide source.
+            | Base your conclusion only on what the actions return. Do not call the same action more
+              than once for the same input.
+            | Then decide:
+            | - If the evidence supports a concrete fix, make "recommendation" that fix: specific and
+              actionable (what to change and where).
+            | - If it does not, make "recommendation" the specific next steps the user should
+              investigate (which classes, logs, or records to inspect, and why).
+            | Set "rootCause" to what your research established, or the most likely area if it is
+              undetermined.
+            | Respond with ONLY a JSON object and nothing else: {"rootCause": "...", "recommendation": "..."}.
+              Do not use the show_command tool; compose your answer as direct text.
+        actions:
+            read_apex_source: @actions.read_apex_source
+                with className = ...
+            read_flow_metadata: @actions.read_flow_metadata
+                with flowApiName = ...
+            retrieve_knowledge: @actions.retrieve_knowledge
+                with searchText = ...
+    actions:
+        read_apex_source:
+            description: "Read the failing Apex class body plus its direct dependencies (scoped)."
+            target: "apex://NortApexSourceAction"
+            inputs:
+                className: string
+                    description: "The failing Apex class to read."
+                    is_required: True
+            outputs:
+                source: string
+                    description: "Scoped class source plus dependencies."
+                    is_displayable: True
+                    filter_from_agent: False
+                dependencyNames: list[string]
+                    description: "Direct dependency class names included."
+                    filter_from_agent: False
+        read_flow_metadata:
+            description: "Read reachable flow-level metadata for a faulting flow."
+            target: "apex://NortFlowMetadataAction"
+            inputs:
+                flowApiName: string
+                    description: "API name of the faulting flow."
+                    is_required: True
+            outputs:
+                processType: string
+                    description: "Flow process type."
+                    filter_from_agent: False
+                triggerType: string
+                    description: "Flow trigger type."
+                    filter_from_agent: False
+                note: string
+                    description: "Notes about metadata availability."
+                    filter_from_agent: False
+        retrieve_knowledge:
+            description: "Retrieve relevant knowledge article titles to ground the diagnosis."
+            target: "apex://NortKnowledgeRetrievalAction"
+            inputs:
+                searchText: string
+                    description: "Text to search knowledge articles for."
+                    is_required: True
+            outputs:
+                articleTitles: list[string]
+                    description: "Titles of relevant knowledge articles."
+                    filter_from_agent: False
+                knowledgeAvailable: boolean
+                    description: "Whether Knowledge is available in this org."
+                    filter_from_agent: False

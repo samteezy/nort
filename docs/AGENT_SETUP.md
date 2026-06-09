@@ -1,32 +1,37 @@
 # nort — Agent & Inbound Setup
 
-The deployable metadata covers the entire **code** loop (objects, config, ingestion, dedup, diagnosis orchestration, case mapping, and the agent's org-reading actions). Two pieces are environment configuration completed in Setup / Agent Builder after deploy:
+The deployable metadata covers the entire **code** loop (objects, config, ingestion, dedup, diagnosis orchestration, case mapping, the agent's org-reading actions) **and the Email Service function itself** (`EmailServicesFunction`). Two pieces still need finishing in Setup / Agent Builder after deploy:
 
-1. The **Email Service** that routes Apex exception emails to the handler.
+1. The inbound **Email Address** on the deployed Email Service, plus routing Apex exception emails to it (the address carries an org-specific context user and a server-generated domain, so it isn't deployable — see §1).
 2. The **Agentforce agent** (topic + grounded prompt) that the loop invokes headlessly.
 
-This split is intentional: the Apex action surface (the genuinely reusable, testable code) is deployed and tested; the agent itself is composed in Agent Builder / Agent Script and tuned per org.
+This split is intentional: the Apex action surface and the service configuration (the genuinely reusable, testable, reproducible parts) are deployed; the org-specific inbound address and the agent are composed per org.
 
 ---
 
 ## 1. Email Service
 
-All UI-only; nothing here is deployed. The handler class `NortErrorEmailHandler`
-must already be deployed and **Active** in the org before you start
-(`sf data query -o <alias> -q "SELECT Name, Status FROM ApexClass WHERE Name='NortErrorEmailHandler'"`).
+The Email Service **function** deploys as metadata
+(`force-app/main/default/emailservices/Nort_Error_Ingestion.xml-meta.xml` →
+`EmailServicesFunction`): it binds the `NortErrorEmailHandler` Apex class, sets
+`Accept Attachments: None`, and sets every failure response (Authentication /
+Authorization / Over Email Rate Limit / Inactive) to **Discard** — the handler always
+returns success, so bounce/retry storms must never feed back into the org. After
+`sf project deploy start` the service exists and is Active; confirm with:
 
-1. **Create the Email Service.** Setup → quick-find **Email Services** → *New Email Service*.
-   - Email Service Name: `Nort Error Ingestion`
-   - Apex class: `NortErrorEmailHandler`
-   - Accept Attachments: **None**
-   - Active: ✓
-   - Failure responses (Authentication / Authorization / Over Email Rate Limit / Deliverability): **Discard** — the handler always returns success, so don't let bounce/retry storms feed back into the org.
-2. **Add an inbound address.** On the saved Email Service → *Email Addresses* related list → *New Email Address*.
+```bash
+sf data query -o <alias> -q "SELECT FunctionName, IsActive, ApexClassId FROM EmailServicesFunction WHERE FunctionName='Nort_Error_Ingestion'"
+```
+
+Only the inbound **address** is manual — its `runAsUser` (context user) is org-specific
+and its full domain is server-generated, so it can't live in source:
+
+1. **Add an inbound address.** Setup → quick-find **Email Services** → open **Nort Error Ingestion** → *Email Addresses* related list → *New Email Address*.
    - Local part: `nort-errors`; Active: ✓
    - **Context User:** an active, licensed user whose permissions run the handler — an admin, or a user with the `Nort_Error_Remediation` permission set. (Ingestion stages `Error_Event__c` in `AccessLevel.SYSTEM_MODE`, but the context user must still be active.)
    - Accept Email From: blank to accept any sender (or restrict to your org's outbound exception-email sender).
    - Save and **copy the generated address** (`nort-errors@<random>.<region>.apex.salesforce.com`).
-3. **Route Apex exception emails to it.** Setup → quick-find **Apex Exception Email** → add the generated address as a recipient (it fires on *unhandled* Apex exceptions, which is what the parser expects), **or** set the inbound address directly as a recipient wherever your org collects exception emails.
+2. **Route Apex exception emails to it.** Setup → quick-find **Apex Exception Email** → add the generated address as a recipient (it fires on *unhandled* Apex exceptions, which is what the parser expects), **or** set the inbound address directly as a recipient wherever your org collects exception emails.
 
 The handler is a thin publisher — it stages a `Error_Event__c` and returns success. It never invokes the agent.
 
