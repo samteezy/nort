@@ -34,7 +34,7 @@ public with sharing class NortDedupBatch implements Database.Batchable<SObject>,
         return Database.getQueryLocator([
             SELECT Id, Fingerprint_Hash__c, Source__c, Apex_Class__c, Apex_Method__c,
                    Parsed_Exception_Type__c, Flow_API_Name__c, Faulting_Element__c,
-                   Message_Snippet__c, Received_At__c
+                   Message_Snippet__c, Raw_Payload__c, Parse_Degraded__c, Received_At__c
             FROM Error_Event__c
             WHERE Status__c IN :statuses AND Fingerprint_Hash__c != null
             WITH SYSTEM_MODE
@@ -138,6 +138,8 @@ public with sharing class NortDedupBatch implements Database.Batchable<SObject>,
             Flow_API_Name__c = representative.Flow_API_Name__c,
             Faulting_Element__c = representative.Faulting_Element__c,
             Message_Template__c = representative.Message_Snippet__c,
+            Raw_Sample__c = representative.Raw_Payload__c,
+            Parse_Degraded__c = representative.Parse_Degraded__c == true,
             First_Seen__c = now,
             Occurrence_Count__c = 0,
             Agent_Invocation_Count__c = 0,

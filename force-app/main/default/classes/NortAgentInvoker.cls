@@ -18,6 +18,9 @@ public with sharing class NortAgentInvoker {
     private static final String PARAM_MESSAGE = 'userMessage';
     private static final String OUTPUT_RESPONSE = 'agentResponse';
 
+    // Cap the verbatim raw notification embedded in the prompt to bound agent token spend.
+    private static final Integer RAW_PROMPT_MAX = 4000;
+
     /** Structured diagnosis request derived from an Error Signature. */
     public class DiagnosisRequest {
         public Id signatureId;
@@ -26,6 +29,7 @@ public with sharing class NortAgentInvoker {
         public String methodName;
         public String exceptionType;
         public String messageTemplate;
+        public String rawMessage;
         public String flowApiName;
         public String faultingElement;
     }
@@ -111,7 +115,10 @@ public with sharing class NortAgentInvoker {
 
             List<Invocable.Action.Result> results = action.invoke();
             if (results.isEmpty() || !results[0].isSuccess()) {
-                throw new NortAgentException('Agent invocation returned no successful result.');
+                String detail = results.isEmpty()
+                    ? 'no results returned'
+                    : String.valueOf(results[0].getErrors());
+                throw new NortAgentException('Agent invocation returned no successful result: ' + detail);
             }
             Object response = results[0].getOutputParameters().get(OUTPUT_RESPONSE);
             return response == null ? null : String.valueOf(response);
@@ -128,19 +135,34 @@ public with sharing class NortAgentInvoker {
      */
     @TestVisible
     private static String buildPrompt(DiagnosisRequest request) {
-        String target = NortConstants.SOURCE_FLOW.equalsIgnoreCase(request.source)
-            ? 'Flow "' + request.flowApiName + '" failing at element "' + request.faultingElement + '"'
-            : 'Apex class "' + request.className + '" method "' + request.methodName + '"';
+        // Degradation-aware target: when parsing couldn't extract a class or flow, point the
+        // agent at the raw notification (appended below) instead of emitting a "null" target.
+        String target;
+        if (NortConstants.SOURCE_FLOW.equalsIgnoreCase(request.source) && String.isNotBlank(request.flowApiName)) {
+            target = 'Flow "' + request.flowApiName + '" failing at element "' + nullToEmpty(request.faultingElement) + '"';
+        } else if (String.isNotBlank(request.className)) {
+            target = 'Apex class "' + request.className + '" method "' + nullToEmpty(request.methodName) + '"';
+        } else {
+            target = 'an unparsed Salesforce error notification (structured fields were unavailable; see the raw notification below)';
+        }
 
-        return String.join(new List<String>{
+        List<String> lines = new List<String>{
             'You are diagnosing a recurring Salesforce runtime error.',
             'Target: ' + target + '.',
             'Exception type: ' + nullToEmpty(request.exceptionType) + '.',
             'Normalized message: ' + nullToEmpty(request.messageTemplate) + '.',
             'Use your actions to read the failing Apex source (scoped to the failing class and its direct dependencies),',
-            'read available flow metadata, and retrieve any relevant knowledge articles.',
-            'Respond with ONLY a JSON object: {"rootCause": "...", "recommendation": "..."}.'
-        }, ' ');
+            'read available flow metadata, and retrieve any relevant knowledge articles.'
+        };
+        if (String.isNotBlank(request.rawMessage)) {
+            lines.add('Raw notification (verbatim, may be truncated):\n' + truncateForPrompt(request.rawMessage));
+        }
+        lines.add('Respond with ONLY a JSON object: {"rootCause": "...", "recommendation": "..."}.');
+        return String.join(lines, ' ');
+    }
+
+    private static String truncateForPrompt(String value) {
+        return value.length() > RAW_PROMPT_MAX ? value.substring(0, RAW_PROMPT_MAX) : value;
     }
 
     /**
@@ -156,8 +178,9 @@ public with sharing class NortAgentInvoker {
             result.errorMessage = 'Agent returned an empty response.';
             return result;
         }
+        String payload = unwrapEnvelope(rawResponse);
         try {
-            Object parsed = JSON.deserializeUntyped(rawResponse);
+            Object parsed = JSON.deserializeUntyped(payload);
             if (parsed instanceof Map<String, Object>) {
                 Map<String, Object> values = (Map<String, Object>) parsed;
                 result.rootCause = stringOf(values.get('rootCause'));
@@ -171,9 +194,40 @@ public with sharing class NortAgentInvoker {
         } catch (Exception ignored) {
             // Not JSON; fall through to treat the response as a plain-text root cause.
         }
-        result.rootCause = rawResponse;
+        result.rootCause = payload;
         result.success = true;
         return result;
+    }
+
+    /**
+     * Unwraps the Invocable Action response envelope. The generateAiAgentResponse
+     * action returns the agent's reply as {"type":"Text","value":"<inner>"}, where
+     * value holds the agent's actual message — typically the diagnosis JSON as a
+     * string. Returns the inner value when that envelope is present, otherwise the
+     * input unchanged (so direct JSON and plain-text responses still parse).
+     *
+     * @param rawResponse The raw output-parameter string from the agent action.
+     * @return The inner payload when enveloped, else rawResponse.
+     */
+    @TestVisible
+    private static String unwrapEnvelope(String rawResponse) {
+        try {
+            Object parsed = JSON.deserializeUntyped(rawResponse);
+            if (parsed instanceof Map<String, Object>) {
+                Map<String, Object> values = (Map<String, Object>) parsed;
+                // Only unwrap a genuine envelope: carries "value" but not the
+                // diagnosis keys (which would mean it is already the payload).
+                if (values.containsKey('value')
+                        && !values.containsKey('rootCause')
+                        && !values.containsKey('recommendation')) {
+                    String innerPayload = stringOf(values.get('value'));
+                    return String.isBlank(innerPayload) ? rawResponse : innerPayload;
+                }
+            }
+        } catch (Exception ignored) {
+            // Not JSON; return unchanged for plain-text handling downstream.
+        }
+        return rawResponse;
     }
 
     private static String stringOf(Object value) {

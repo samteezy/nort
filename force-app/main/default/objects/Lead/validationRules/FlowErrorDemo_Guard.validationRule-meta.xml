@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>FlowErrorDemo_Guard</fullName>
+    <active>true</active>
+    <description>nort Flow-fault probe: deliberately fails when the FlowErrorDemo flow writes the sentinel Description, so an unhandled Flow fault is raised and a Flow fault email is generated for end-to-end pipeline testing. Mirror of the LeadErrorDemo Apex probe.</description>
+    <errorConditionFormula>Description = &quot;NORT_FLOW_DEMO_VIOLATION&quot;</errorConditionFormula>
+    <errorMessage>nort flow demo: deliberate validation failure for end-to-end Flow fault testing.</errorMessage>
+</ValidationRule>

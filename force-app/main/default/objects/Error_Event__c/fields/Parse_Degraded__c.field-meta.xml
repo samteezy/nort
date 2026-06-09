@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Parse_Degraded__c</fullName>
+    <label>Parse Degraded</label>
+    <description>True when the parser could not extract structured fields and a fallback (body-only) fingerprint was used instead. The event still flows through dedup and diagnosis; this flag surfaces format drift so it never fails silently.</description>
+    <inlineHelpText>Set when structured parsing failed and a coarse, body-only fingerprint was used. The agent diagnoses from the raw sample.</inlineHelpText>
+    <type>Checkbox</type>
+    <defaultValue>false</defaultValue>
+</CustomField>

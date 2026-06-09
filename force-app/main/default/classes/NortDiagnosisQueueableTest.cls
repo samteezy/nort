@@ -35,19 +35,22 @@ private class NortDiagnosisQueueableTest {
             Signature__c = signature.Id, Received_At__c = System.now()
         );
         NortAgentInvoker.setClient(new SuccessClient());
+        // Mock Case persistence so the test never performs real Case DML.
+        TestDataFactory.CaseGatewayStub gateway = new TestDataFactory.CaseGatewayStub();
+        NortCaseService.setGateway(gateway);
 
         Test.startTest();
         NortDiagnosisQueueable.dispatch();
         Test.stopTest();
 
         Error_Signature__c result = [
-            SELECT Diagnosis_Status__c, Agent_Invocation_Count__c, Root_Cause__c, Recommendation__c, Case__c
+            SELECT Diagnosis_Status__c, Agent_Invocation_Count__c, Root_Cause__c, Recommendation__c
             FROM Error_Signature__c WHERE Id = :signature.Id
         ];
         Assert.areEqual('Diagnosed', result.Diagnosis_Status__c, 'Signature should be Diagnosed on success.');
         Assert.areEqual(1, result.Agent_Invocation_Count__c, 'Exactly one invocation should be charged per signature.');
         Assert.areEqual('Root: null deref', result.Root_Cause__c, 'Root cause should be persisted.');
-        Assert.isNotNull(result.Case__c, 'A case should be created and linked.');
+        Assert.areEqual(1, gateway.insertedCases.size(), 'A case should be created and linked.');
 
         Integer casedEvents = [SELECT COUNT() FROM Error_Event__c WHERE Status__c = 'Cased'];
         Assert.areEqual(1, casedEvents, 'Representative events should advance to Cased.');

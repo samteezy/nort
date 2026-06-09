@@ -27,6 +27,39 @@ public with sharing class NortCaseService {
     }
 
     /**
+     * Persistence seam for Case reads/writes. Isolated behind an interface so
+     * tests can inject an in-memory fake and never depend on the target org's
+     * Case automation (triggers/flows that fire on Case insert). Mirrors the
+     * dependency-injection pattern used by NortAgentInvoker.Client.
+     */
+    public interface CaseGateway {
+        Map<Id, Case> findCasesByIds(Set<Id> caseIds);
+        void insertCases(List<Case> cases);
+        void insertComments(List<CaseComment> comments);
+        // Persists the Case lookup back onto routed signatures. Behind the seam
+        // because tests assign synthetic Case Ids, which a real lookup update
+        // would reject as an invalid cross-reference.
+        void updateSignatures(List<Error_Signature__c> signatures);
+    }
+
+    @TestVisible
+    private static CaseGateway gatewayOverride;
+
+    /**
+     * Injects a CaseGateway (used by tests to avoid real Case DML).
+     *
+     * @param gateway The gateway implementation to use for this transaction.
+     */
+    @TestVisible
+    public static void setGateway(CaseGateway gateway) {
+        gatewayOverride = gateway;
+    }
+
+    private static CaseGateway resolveGateway() {
+        return gatewayOverride != null ? gatewayOverride : new DmlCaseGateway();
+    }
+
+    /**
      * Routes each diagnosed signature to a created or updated case and updates
      * the signature's Case lookup. Signatures must already carry their diagnosis
      * fields (Root_Cause__c, Recommendation__c) and identity fields.
@@ -63,9 +96,10 @@ public with sharing class NortCaseService {
             }
         }
 
+        CaseGateway gateway = resolveGateway();
         List<Error_Signature__c> signaturesToUpdate = new List<Error_Signature__c>();
         if (!casesToInsert.isEmpty()) {
-            Database.insert(casesToInsert, true, AccessLevel.SYSTEM_MODE);
+            gateway.insertCases(casesToInsert);
             for (Integer i = 0; i < casesToInsert.size(); i++) {
                 Error_Signature__c signature = signaturesForNewCase[i];
                 signature.Case__c = casesToInsert[i].Id;
@@ -73,10 +107,10 @@ public with sharing class NortCaseService {
             }
         }
         if (!commentsToInsert.isEmpty()) {
-            Database.insert(commentsToInsert, false, AccessLevel.SYSTEM_MODE);
+            gateway.insertComments(commentsToInsert);
         }
         if (!signaturesToUpdate.isEmpty()) {
-            Database.update(signaturesToUpdate, false, AccessLevel.SYSTEM_MODE);
+            gateway.updateSignatures(signaturesToUpdate);
         }
     }
 
@@ -90,9 +124,7 @@ public with sharing class NortCaseService {
         if (caseIds.isEmpty()) {
             return new Map<Id, Case>();
         }
-        return new Map<Id, Case>([
-            SELECT Id, IsClosed, CaseNumber FROM Case WHERE Id IN :caseIds WITH SYSTEM_MODE
-        ]);
+        return resolveGateway().findCasesByIds(caseIds);
     }
 
     private static Case buildCase(Error_Signature__c signature, Id recordTypeId, Id queueId, Id parentCaseId) {
@@ -182,5 +214,30 @@ public with sharing class NortCaseService {
 
     private static String nullToEmpty(String value) {
         return value == null ? '' : value;
+    }
+
+    /**
+     * Default gateway: real SOQL/DML in system mode. The single place that
+     * touches the Case object, so any org-side Case automation only runs here
+     * (never in tests, which inject a fake).
+     */
+    private class DmlCaseGateway implements CaseGateway {
+        public Map<Id, Case> findCasesByIds(Set<Id> caseIds) {
+            return new Map<Id, Case>([
+                SELECT Id, IsClosed, CaseNumber FROM Case WHERE Id IN :caseIds WITH SYSTEM_MODE
+            ]);
+        }
+
+        public void insertCases(List<Case> cases) {
+            Database.insert(cases, true, AccessLevel.SYSTEM_MODE);
+        }
+
+        public void insertComments(List<CaseComment> comments) {
+            Database.insert(comments, false, AccessLevel.SYSTEM_MODE);
+        }
+
+        public void updateSignatures(List<Error_Signature__c> signatures) {
+            Database.update(signatures, false, AccessLevel.SYSTEM_MODE);
+        }
     }
 }

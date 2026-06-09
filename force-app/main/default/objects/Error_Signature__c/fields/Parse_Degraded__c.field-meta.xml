@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Parse_Degraded__c</fullName>
+    <label>Parse Degraded</label>
+    <description>True when this signature was keyed by a fallback (body-only) fingerprint because the representative event could not be fully parsed. Carried from the representative Error Event so degraded signatures are reportable.</description>
+    <inlineHelpText>Set when the signature was formed from an email the parser could not fully structure; the agent diagnoses from the raw sample.</inlineHelpText>
+    <type>Checkbox</type>
+    <defaultValue>false</defaultValue>
+</CustomField>
