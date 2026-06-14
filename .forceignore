@@ -10,3 +10,4 @@
 
 # OS / editor
 .DS_Store
+**/jsconfig.json
