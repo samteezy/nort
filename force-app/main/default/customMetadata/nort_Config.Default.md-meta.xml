@@ -44,10 +44,10 @@
     </values>
     <values>
         <field>Max_Item_Chars__c</field>
-        <value xsi:type="xsd:double">6000</value>
+        <value xsi:type="xsd:double">20000</value>
     </values>
     <values>
         <field>Max_Total_Chars__c</field>
-        <value xsi:type="xsd:double">24000</value>
+        <value xsi:type="xsd:double">60000</value>
     </values>
 </CustomMetadata>

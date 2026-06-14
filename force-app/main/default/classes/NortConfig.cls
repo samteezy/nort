@@ -25,9 +25,9 @@ public with sharing class NortConfig {
     @TestVisible
     private static final Integer FALLBACK_MAX_ANALYSIS_ITEMS = 8;
     @TestVisible
-    private static final Integer FALLBACK_MAX_ITEM_CHARS = 6000;
+    private static final Integer FALLBACK_MAX_ITEM_CHARS = 20000;
     @TestVisible
-    private static final Integer FALLBACK_MAX_TOTAL_CHARS = 24000;
+    private static final Integer FALLBACK_MAX_TOTAL_CHARS = 60000;
 
     // Transaction-scoped caches. @TestVisible so tests can inject overrides.
     @TestVisible

@@ -17,7 +17,7 @@ Grounding context (the implicated code and metadata):
 &quot;&quot;&quot;
 
 Report your analysis as three things:
-- findings: what the implicated code and metadata reveal about how this error could occur — the specific behaviors, values, gaps, and contradictions that bear on it. Cite the exact class/method, flow element, or field, and quote the relevant lines, so the orchestrator can act without re-reading the source. Pull out and explain what is pertinent; optimize for relevance and signal, not length.
+- findings: what the implicated code and metadata reveal about how this error could occur — the specific behaviors, values, gaps, and contradictions that bear on it. For every claim, quote the exact offending code or metadata VERBATIM — the precise statements, expressions, flow element, or field as written in the context — and attribute each quote to the class and method (or flow element / field) it comes from. Quote, do not paraphrase, so the orchestrator can reuse the quote without re-reading the source. Pull out and explain what is pertinent; optimize for relevance and signal, not length.
 - likelyCause: the single most likely cause the context supports. If the context is insufficient to determine it, say so plainly and state what is missing rather than guessing.
 - suggestedNextItems: additional &quot;type:identifier&quot; tokens (apex:/flow:/field:/symboltable:) that the context references but does not include and that would clarify the diagnosis. Leave empty if the context is sufficient.
 

@@ -4,7 +4,7 @@
   "properties" : {
     "findings" : {
       "title" : "findings",
-      "description" : "Focused, high-value analysis of what the implicated code and metadata reveal about how the error could occur, citing specific classes/methods, flow elements, or fields.",
+      "description" : "Focused, high-value analysis of what the implicated code and metadata reveal about how the error could occur. Every claim quotes the exact offending code or metadata verbatim, attributed to the class/method (or flow element / field) it comes from — quoted, not paraphrased.",
       "lightning:type" : "lightning__textType"
     },
     "likelyCause" : {
