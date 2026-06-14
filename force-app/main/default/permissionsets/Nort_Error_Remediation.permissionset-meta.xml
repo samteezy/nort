@@ -121,10 +121,18 @@
         <apexClass>NortAnalysisGroundingProvider</apexClass>
         <enabled>true</enabled>
     </classAccesses>
-    <!-- Lets the running/integration user use the Nort_Tooling External Credential
-         named principal for same-org Tooling API callouts. -->
-    <externalCredentialPrincipalAccesses>
-        <enabled>true</enabled>
-        <externalCredentialPrincipal>Nort_Tooling - NortToolingPrincipal</externalCredentialPrincipal>
-    </externalCredentialPrincipalAccesses>
+    <!-- MANUAL POST-CONFIG STEP (cannot be deployed from source):
+         The Nort_Tooling External Credential's "NortToolingPrincipal" only becomes a
+         referenceable ExternalCredentialPrincipal once its client secret is entered in
+         Setup (the secret can't live in source). After configuring the principal, grant
+         the integration/running user access to it — either in Setup (Permission Set →
+         External Credential Principal Access) or by re-deploying this permission set with
+         the block below restored:
+
+         <externalCredentialPrincipalAccesses>
+             <enabled>true</enabled>
+             <externalCredentialPrincipal>Nort_Tooling - NortToolingPrincipal</externalCredentialPrincipal>
+         </externalCredentialPrincipalAccesses>
+
+         See docs/AGENT_SETUP.md (External/Named Credential setup). -->
 </PermissionSet>

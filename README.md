@@ -107,7 +107,7 @@ sf apex run test -o nort -l RunLocalTests -c -r human
 echo "NortHeartbeatScheduler.start();" | sf apex run -o nort
 ```
 
-The deploy includes the Email Service itself (`EmailServicesFunction`); only its org-specific inbound address and the agent are wired by hand — see [`docs/AGENT_SETUP.md`](docs/AGENT_SETUP.md).
+The deploy includes the Email Service (`EmailServicesFunction`), the `Nort_Error_Analysis` prompt template (with its Apex grounding binding), and the `Nort_Tooling` External + Named Credential. Wired by hand afterward: the org-specific inbound email address, the Agentforce agent, the External Client App + the per-org secrets/URLs its credentials hold, and the External-Credential principal-access grant — see [`docs/AGENT_SETUP.md`](docs/AGENT_SETUP.md).
 
 ## The credit-discipline proof
 

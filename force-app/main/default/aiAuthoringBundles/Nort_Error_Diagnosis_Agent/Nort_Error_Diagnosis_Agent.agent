@@ -48,13 +48,32 @@ subagent error_diagnosis:
             | Set "rootCause" to what the analysis established, or the most likely area if undetermined.
             | Respond with ONLY a JSON object and nothing else: {"rootCause": "...", "recommendation": "..."}.
               Do not use the show_command tool; compose your answer as direct text.
-        # The "Analyze Error" action is the Nort_Error_Analysis prompt template, wired in
-        # Agent Builder (its Apex grounding resource is NortAnalysisGroundingProvider, deployed).
-        # It is composed per org rather than declared here — see docs/AGENT_SETUP.md.
+        # analyze_error targets the Nort_Error_Analysis prompt template (deployed); its Apex
+        # grounding resource is NortAnalysisGroundingProvider (deployed). Declared in this bundle
+        # so the wiring deploys — no manual Agent Builder step. See docs/AGENT_SETUP.md.
         actions:
+            analyze_error: @actions.analyze_error
+                with "Input:requestedItems" = ...
+                with "Input:exceptionType" = ...
+                with "Input:messageTemplate" = ...
             retrieve_knowledge: @actions.retrieve_knowledge
                 with searchText = ...
     actions:
+        analyze_error:
+            description: "Resolve a focused list of implicated code/metadata tokens into one bounded context and return the code-level root-cause analysis. Call at most once."
+            target: "prompt://Nort_Error_Analysis"
+            inputs:
+                "Input:requestedItems": string
+                    description: "Newline-delimited type:identifier tokens (apex:/flow:/field:/symboltable:), kept focused — never org-wide."
+                    is_required: True
+                "Input:exceptionType": string
+                    description: "The exception type from the error context."
+                "Input:messageTemplate": string
+                    description: "The normalized error message from the error context."
+            outputs:
+                promptResponse: string
+                    description: "The code-level analysis: root cause and recommendation."
+                    filter_from_agent: False
         retrieve_knowledge:
             description: "Retrieve relevant knowledge article titles to ground the diagnosis."
             target: "apex://NortKnowledgeRetrievalAction"
