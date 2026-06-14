@@ -1,13 +1,12 @@
 # nort — Agent & Inbound Setup
 
-The deployable metadata covers the entire **code** loop (objects, config, ingestion, dedup, diagnosis orchestration, case mapping, the agent's org-reading actions) **and the Email Service function itself** (`EmailServicesFunction`). Two pieces still need finishing in Setup / Agent Builder after deploy:
+The deployable metadata covers the entire **code** loop (objects, config, ingestion, dedup, diagnosis orchestration, case mapping, the org-reading actions), **the Email Service function itself** (`EmailServicesFunction`), the **`Nort_Error_Research` prompt template** + its `nortEvidence` output schema, the **`Nort_Tooling` External + Named Credential** skeletons, **and the `Nort_Error_Diagnosis_Agent` Agent Script bundle** (`aiAuthoringBundles/`). What still needs finishing in Setup / Agent Builder after deploy:
 
 1. The inbound **Email Address** on the deployed Email Service, plus routing Apex exception emails to it (the address carries an org-specific context user and a server-generated domain, so it isn't deployable — see §1).
-2. The **Agentforce agent** (topic + grounded prompt) that the loop invokes headlessly.
+2. **Publishing/activating** the deployed agent (its topic, subagent, and action wiring all ship in source — see §2).
+3. The per-org **secrets/URLs** the credential skeletons hold: the **External Client App** + its consumer key/secret, the Named Credential's My Domain `Url`, the External Credential's token-endpoint `AuthProviderUrl`, and the one **principal-access grant** on the permission set (the principal only exists once its secret is configured — see §5).
 
-The orchestrator/analysis design (see §5–6) is now **fully deployable**: the **`Nort_Error_Analysis` prompt template** (`genAiPromptTemplates/`, incl. its Apex grounding binding) and the **`Nort_Tooling` External + Named Credential** skeletons deploy with the project. Only the org-specific secrets they hold stay manual — the **External Client App** + its consumer key/secret, the Named Credential's My Domain `Url`, the External Credential's token-endpoint `AuthProviderUrl`, and the one **principal-access grant** on the permission set (the principal only exists once its secret is configured).
-
-This split is intentional: the Apex action surface, the prompt template, the credential structure, and the service configuration (the genuinely reusable, testable, reproducible parts) are deployed; the org-specific inbound address, the agent, and the per-org secrets are composed per org.
+This split is intentional: the Apex action surface, the prompt template + schema, the agent bundle, the credential structure, and the service configuration (the genuinely reusable, testable, reproducible parts) are deployed; the org-specific inbound address, the agent's publish/activate step, and the per-org secrets are composed per org.
 
 ---
 
@@ -49,30 +48,28 @@ Expect a new row with `Status__c = Parsed`. An exception thrown by a `Nort`-pref
 
 ## 2. Agentforce agent
 
-Create an agent whose **API name matches** `nort_Config__mdt.Default.Agent_API_Name__c` (default `Nort_Error_Diagnosis_Agent`).
+The agent **deploys as source** — an Agent Script `AiAuthoringBundle` at
+`force-app/main/default/aiAuthoringBundles/Nort_Error_Diagnosis_Agent/` (its
+`developer_name` matches `nort_Config__mdt.Default.Agent_API_Name__c`, default
+`Nort_Error_Diagnosis_Agent`). The system prompt, the `error_diagnosis` subagent,
+all action wiring, and the self-imposed spend guards are all in the `.agent` file —
+**no manual Agent Builder authoring.** After deploy, just **publish + activate** it
+(in Agent Builder — see the [memory note](../README.md) on not using `sf agent` CLI
+commands from this environment).
 
-### Topic
-**Name:** Error Diagnosis
-**Scope:** Diagnose a single Salesforce runtime error using the org's own source and knowledge, then return a structured root cause and recommendation.
+### Shape: iterative orchestrator
 
-**Instructions (paste into the topic):**
-> You diagnose one Salesforce runtime error at a time. You are given the failing Apex class/method (or flow API name and faulting element), the exception type, and a normalized error message. Use your actions to (1) read the failing Apex source scoped to the failing class and its direct dependencies, (2) read available flow metadata, and (3) retrieve relevant knowledge articles. Do not request org-wide source. Base your conclusion only on what the actions return. Respond with ONLY a JSON object: `{"rootCause": "...", "recommendation": "..."}`.
+The agent **never reads source itself**. It decides which code/metadata is implicated, hands a focused token list to the research prompt template, reasons over what comes back, and **loops** with refined tokens until it is confident or its budget is spent — then composes the final answer. The `error_diagnosis` subagent's instructions encode the rounds: hypothesize tokens → (optionally verify a record/field exists) → gather evidence → consult docs → reassess → compose, quoting the implicated code/metadata **verbatim**.
 
-### Actions
+| Action | Backed by | Purpose | Budget guard |
+|---|---|---|---|
+| `analyze_error` | `Nort_Error_Research` prompt template (§6) | resolves the implicated code/metadata into one bounded context and returns a focused **research** result (`findings` / `likelyCause` / `suggestedNextItems`) — a step, not a verdict | `Analysis_Count < 10` |
+| `AnswerQuestionsWithSalesforceDocumentation` | standard action | platform feature/limit/config questions | `Knowledge_Count < 5` |
+| `QueryRecords` / `QueryRecordsWithAggregate` | standard actions | confirm a record/object/field exists or inspect data values before spending an analysis call | — |
 
-The agent is an **orchestrator**: it decides which code/metadata is implicated and hands a token list to the analysis prompt template, which does the heavy retrieval + analysis. It still retrieves Knowledge directly.
+`analyze_error` targets `prompt://Nort_Error_Research` with inputs `"Input:requestedItems"` (newline-delimited `type:identifier` tokens — `apex:`/`flow:`/`field:`/`symboltable:`), `"Input:exceptionType"`, `"Input:messageTemplate"`, and the `promptResponse` output. The agent calls it **repeatedly across rounds** (each round a *new* focused set, not a repeat), composing the final `{"rootCause", "recommendation"}` from all the evidence.
 
-| Action | Backed by | Purpose |
-|---|---|---|
-| Analyze Error | `Nort_Error_Analysis` prompt template (§5) | resolves the implicated code/metadata and returns the structured root-cause/recommendation |
-| Retrieve Knowledge | `NortKnowledgeRetrievalAction` (Apex) | grounding articles (no-op if Knowledge off) |
-
-Both actions are **declared in the deployed `.agent` bundle** — no manual Agent Builder wiring. `analyze_error` targets `prompt://Nort_Error_Analysis` with inputs `"Input:requestedItems"` (newline-delimited `type:identifier` tokens — `apex:`/`flow:`/`field:`/`symboltable:`), `"Input:exceptionType"`, `"Input:messageTemplate"`, and the fixed `promptResponse` output. The agent calls it **at most once**, calls `retrieve_knowledge` separately, and composes the final JSON from both. After deploying the bundle, **publish + activate** the agent (`sf agent publish authoring-bundle` / `sf agent activate`, or in Agent Builder) for the new wiring to go live.
-
-> `NortApexSourceAction` and `NortFlowMetadataAction` are **no longer direct agent actions** — their logic is now invoked internally by the prompt template's grounding (`NortAnalysisGroundingProvider`). The Apex stays deployed (and is still valid `@InvocableMethod` for later MCP republication); it is just not assigned to the agent. The `Retrieve Knowledge` action appears under the **Nort Error Remediation** category in Agent Builder (set via the `@InvocableMethod category`).
-
-### Grounded prompt template (optional)
-For tighter grounding, back the topic with a prompt template that merges the signature fields and the action outputs. The prompt above is sufficient for phase 1; a prompt template is a refinement, not a requirement.
+> `NortApexSourceAction` and `NortFlowMetadataAction` are **not** agent actions — their logic is invoked internally by the prompt template's grounding (`NortAnalysisGroundingProvider`). They stay deployed (valid `@InvocableMethod` for later MCP republication), just unassigned to the agent. `NortKnowledgeRetrievalAction` (org Knowledge articles) is likewise deployed but **not currently wired** — the agent uses the standard `AnswerQuestionsWithSalesforceDocumentation` action for platform questions; the Apex seam remains available (and is a clean no-op if Knowledge is off) for a later wiring or MCP republication.
 
 ---
 
@@ -116,30 +113,31 @@ Expect a populated summary (or a clean `success=false` with a reason — the cli
 
 > **Spend discipline:** `NortAnalysisGroundingProvider` caps retrieval via `nort_Config__mdt` (`Max_Analysis_Items__c` — also the callout budget — `Max_Item_Chars__c`, `Max_Total_Chars__c`). Tune there, never in code.
 
-## 6. Analysis prompt template
+## 6. Research prompt template
 
-The Flex prompt template **deploys as metadata**: `genAiPromptTemplates/Nort_Error_Analysis.genAiPromptTemplate-meta.xml`. No Prompt Builder authoring needed — it ships complete:
+The Flex prompt template **deploys as metadata**: `genAiPromptTemplates/Nort_Error_Research.genAiPromptTemplate-meta.xml`, with its structured-output schema at `lightningTypes/nortEvidence/schema.json`. No Prompt Builder authoring needed — it ships complete:
 
 - **Inputs:** `requestedItems` (required), `exceptionType`, `messageTemplate` — `primitive://String`, named to match `NortAnalysisGroundingProvider.Request`.
 - **Grounding:** a `templateDataProviders` block binds `apex://NortAnalysisGroundingProvider` (deployed, `@InvocableMethod(... callout=true)`), mapping each input to the provider's `Request` variable; the body references its output via `{!$Apex:NortAnalysisGroundingProvider.groundingContext}`. This is the single place that retrieves and bounds the code/metadata.
-- **Body:** instructs the model to diagnose using ONLY the grounding context and respond with ONLY `{"rootCause": "...", "recommendation": "..."}`.
-- **Model:** `primaryModel` is `sfdc_ai__DefaultBedrockAnthropicClaude45Haiku` (a Salesforce-managed default). Swap for a stronger/BYO model in Prompt Builder or by editing `primaryModel` — no code change.
+- **Body:** instructs the model to reason over ONLY the grounding context and return a focused **research** result, quoting offending code/metadata verbatim and attributing each quote. It is a research step the agent calls iteratively, **not** a final verdict.
+- **Output:** structured JSON via the `nortEvidence` schema (`outputSchema`, `responseFormat=JSON`) — `findings`, `likelyCause`, and `suggestedNextItems` (further `type:identifier` tokens the context referenced but did not include).
+- **Model:** `primaryModel` is `sfdc_ai__DefaultBedrockAnthropicClaude46Sonnet` (a Salesforce-managed default). Swap for a stronger/BYO model by editing `primaryModel` — no code change.
 
-After deploy it appears in Prompt Builder as `Nort Error Analysis`. The agent's **Analyze Error** action (`analyze_error`) targets it directly in the deployed `.agent` bundle (§2) — no manual wiring; just publish + activate the agent.
+After deploy it appears in Prompt Builder as `Nort Error Research`. The agent's `analyze_error` action targets it directly in the deployed `.agent` bundle (§2) — no manual wiring; just publish + activate the agent.
 
 **Must-verify-against-org for §§5–6:**
 1. **Callouts in the prompt-template grounding context.** If grounding Apex cannot make outbound callouts in your org, use the **staged-record fallback**: add a normal `@InvocableMethod(callout=true)` agent action that runs the same `NortAnalysisGroundingProvider` retrieval *before* analysis, writes the bounded context to a Long Text field on `Error_Signature__c`, and have the template ground from that field (a DML-free SOQL read). The retrieval logic is unchanged — only the wiring moves.
-2. The exact prompt-template-as-agent-action wiring and input mapping (the template + grounding deploy; the agent-action binding is composed in Agent Builder).
+2. The prompt-template-as-agent-action wiring (template, grounding, and the `.agent` bundle all deploy; confirm the binding survived **publish + activate** in your org).
 3. The per-org secrets the deployed credential skeletons leave blank: the External Credential's `AuthProviderUrl` + consumer key/secret, the Named Credential's `Url`, and the principal-access grant (§5).
 
 ## 7. Smoke test the orchestrator end to end
 
-1. Stage a known `Error_Signature__c` (Apex or Flow) and mark it `Queued`.
-2. Run `NortHeartbeatScheduler` / `NortDiagnosisQueueable` (or call `NortAgentInvoker.diagnose(...)`).
-3. Confirm the agent requested a focused token list, the template returned `{rootCause, recommendation}`, and a Case routed via `NortCaseService`.
+1. Stage a known `Error_Signature__c` (Apex or Flow) and mark it `Queued`. (Or, on an already-diagnosed signature, check `Force_Reprocess__c` and save to re-run past the cooldown — `NortSignatureTrigger` requeues it and dispatches the drain chain.)
+2. Run `NortHeartbeatScheduler` / `NortDiagnosisQueueable` (or call `NortAgentInvoker.diagnose(...)`, or invoke `NortAgentDiagnosisAction` from a Flow for one already-deduplicated signature).
+3. Confirm the agent ran one or more focused `analyze_error` rounds, composed `{rootCause, recommendation}` (with verbatim code quotes), and a Case routed via `NortCaseService`.
 
-> **Spend ledger note:** the template adds a second (analysis) model call inside each orchestrator invocation. `Agent_Invocation_Count__c` still counts orchestrator invocations (one per unique signature — the dedup-before-spend invariant is intact) but no longer equals total credit/token spend.
+> **Spend ledger note:** the agent now **iterates** — multiple `analyze_error` / doc / query calls per orchestrator invocation (capped by `Analysis_Count < 10` and `Knowledge_Count < 5`). `Agent_Invocation_Count__c` still counts orchestrator invocations (one per unique signature — the dedup-before-spend invariant is intact) but no longer equals total credit/token spend.
 
 ## MCP republication (later phase)
 
-The three actions are authored as standard `@InvocableMethod` with `@InvocableVariable` I/O, so they can be republished as Apex-backed hosted MCP tools (Summer '26) for reuse by external agents without rework. Not required for the in-org loop.
+The nort org-reading actions are authored as standard `@InvocableMethod` with `@InvocableVariable` I/O, so they can be republished as Apex-backed hosted MCP tools (Summer '26) for reuse by external agents without rework. Not required for the in-org loop.
