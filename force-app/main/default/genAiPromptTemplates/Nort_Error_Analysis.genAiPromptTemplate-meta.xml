@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GenAiPromptTemplate xmlns="http://soap.sforce.com/2006/04/metadata">
-    <activeVersionIdentifier>NortErrorAnalysisBody000000000=_1</activeVersionIdentifier>
+    <activeVersionIdentifier>sknDqN0rKyUiQTiLDTainabgkSBC5/dQhLm2TbUPGHg=_2</activeVersionIdentifier>
     <description>Diagnoses a runtime error from the bounded code/metadata grounding context assembled by NortAnalysisGroundingProvider, returning a structured root cause and recommendation.</description>
     <developerName>Nort_Error_Analysis</developerName>
     <masterLabel>Nort Error Analysis</masterLabel>
@@ -68,6 +68,78 @@ Respond with ONLY a single JSON object and nothing else — no markdown, no prea
             <referenceName>Apex:NortAnalysisGroundingProvider</referenceName>
         </templateDataProviders>
         <versionIdentifier>NortErrorAnalysisBody000000000=_1</versionIdentifier>
+    </templateVersions>
+    <templateVersions>
+        <content>You are a Salesforce runtime-error diagnostician. Diagnose the error described below using ONLY the grounding context provided. Do not use outside knowledge and do not invent details that are not present in the context.
+
+Error type: {!$Input:exceptionType}
+Error message (normalized): {!$Input:messageTemplate}
+
+Grounding context (the implicated code and metadata):
+&quot;&quot;&quot;
+{!$Apex:NortAnalysisGroundingProvider.groundingContext}
+&quot;&quot;&quot;
+
+Identify the single most likely root cause and a concrete recommendation to fix it, grounded strictly in the context above. If the context is insufficient to determine the cause, state that plainly in rootCause rather than guessing.
+
+If possible, cite or quote specific metadata to give the reader accurate indication of where the automation is failing or needs additional research.
+
+Respond with ONLY a single JSON object and nothing else — no markdown, no preamble, no code fences:
+{&quot;rootCause&quot;: &quot;...&quot;, &quot;recommendation&quot;: &quot;...&quot;}
+</content>
+        <fileDroppingStrategy>{&quot;dropFilesBy&quot;:&quot;LAST_MODIFIED_DATE&quot;,&quot;dropFileStartingWith&quot;:&quot;OLDEST&quot;}</fileDroppingStrategy>
+        <inputs>
+            <apiName>requestedItems</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>Requested Items</masterLabel>
+            <referenceName>Input:requestedItems</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>exceptionType</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>Exception Type</masterLabel>
+            <referenceName>Input:exceptionType</referenceName>
+            <required>false</required>
+        </inputs>
+        <inputs>
+            <apiName>messageTemplate</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>Normalized Message</masterLabel>
+            <referenceName>Input:messageTemplate</referenceName>
+            <required>false</required>
+        </inputs>
+        <isCitationEnabled>false</isCitationEnabled>
+        <outputSchema>nortAnalysis</outputSchema>
+        <primaryModel>sfdc_ai__DefaultBedrockAnthropicClaude46Sonnet</primaryModel>
+        <responseFormat>JSON</responseFormat>
+        <status>Published</status>
+        <templateDataProviders>
+            <definition>apex://NortAnalysisGroundingProvider</definition>
+            <description>Resolves requested code/metadata items (apex/flow/field/symboltable) into one bounded context for the analysis prompt template.</description>
+            <label>Nort: Build Analysis Grounding</label>
+            <parameters>
+                <definition>primitive://String</definition>
+                <isRequired>false</isRequired>
+                <parameterName>exceptionType</parameterName>
+                <valueExpression>{!$Input:exceptionType}</valueExpression>
+            </parameters>
+            <parameters>
+                <definition>primitive://String</definition>
+                <isRequired>false</isRequired>
+                <parameterName>messageTemplate</parameterName>
+                <valueExpression>{!$Input:messageTemplate}</valueExpression>
+            </parameters>
+            <parameters>
+                <definition>primitive://String</definition>
+                <isRequired>true</isRequired>
+                <parameterName>requestedItems</parameterName>
+                <valueExpression>{!$Input:requestedItems}</valueExpression>
+            </parameters>
+            <referenceName>Apex:NortAnalysisGroundingProvider</referenceName>
+        </templateDataProviders>
+        <templateFormat>FormulaExpression</templateFormat>
+        <versionIdentifier>sknDqN0rKyUiQTiLDTainabgkSBC5/dQhLm2TbUPGHg=_2</versionIdentifier>
     </templateVersions>
     <type>einstein_gpt__flex</type>
     <visibility>Global</visibility>
