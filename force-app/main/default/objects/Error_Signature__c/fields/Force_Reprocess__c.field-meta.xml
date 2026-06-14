@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Force_Reprocess__c</fullName>
+    <label>Force Reprocess</label>
+    <description>Momentary admin action: check and save to requeue this signature for immediate agent re-diagnosis, overriding the cooldown. NortSignatureTrigger resets it to false on save and dispatches the diagnosis chain, so it behaves like a button, not a persistent state. Each force counts as one real agent invocation (Agent_Invocation_Count__c increments).</description>
+    <inlineHelpText>Check and save to re-run the agent diagnosis on this signature now. The box resets itself; this charges one agent invocation.</inlineHelpText>
+    <type>Checkbox</type>
+    <defaultValue>false</defaultValue>
+</CustomField>

@@ -48,6 +48,10 @@
                 <behavior>Readonly</behavior>
                 <field>Last_Diagnosed_At__c</field>
             </layoutItems>
+            <layoutItems>
+                <behavior>Edit</behavior>
+                <field>Force_Reprocess__c</field>
+            </layoutItems>
         </layoutColumns>
         <style>TwoColumnsTopToBottom</style>
     </layoutSections>
