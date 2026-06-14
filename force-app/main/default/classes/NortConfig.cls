@@ -19,6 +19,16 @@ public with sharing class NortConfig {
     @TestVisible
     private static final Integer FALLBACK_BATCH_SIZE = 200;
 
+    // Tooling / analysis-grounding fallbacks (used when the Default config record is absent).
+    @TestVisible
+    private static final String FALLBACK_TOOLING_NAMED_CREDENTIAL = 'Nort_Tooling';
+    @TestVisible
+    private static final Integer FALLBACK_MAX_ANALYSIS_ITEMS = 8;
+    @TestVisible
+    private static final Integer FALLBACK_MAX_ITEM_CHARS = 6000;
+    @TestVisible
+    private static final Integer FALLBACK_MAX_TOTAL_CHARS = 24000;
+
     // Transaction-scoped caches. @TestVisible so tests can inject overrides.
     @TestVisible
     private static nort_Config__mdt configOverride;
@@ -89,6 +99,30 @@ public with sharing class NortConfig {
     /** @return Developer name of the dedicated automated-error Case record type. */
     public static String caseRecordTypeDeveloperName() {
         return safeGet()?.Case_RecordType_DeveloperName__c;
+    }
+
+    /**
+     * @return Developer name of the Named Credential the Tooling API client calls
+     * through (callout:&lt;name&gt;/services/data/...). Falls back to 'Nort_Tooling'.
+     */
+    public static String toolingNamedCredential() {
+        String configured = safeGet()?.Tooling_Named_Credential__c;
+        return String.isBlank(configured) ? FALLBACK_TOOLING_NAMED_CREDENTIAL : configured;
+    }
+
+    /** @return Maximum metadata items resolved per analysis grounding call (primary spend guardrail). */
+    public static Integer maxAnalysisItems() {
+        return intValue(safeGet()?.Max_Analysis_Items__c, FALLBACK_MAX_ANALYSIS_ITEMS);
+    }
+
+    /** @return Maximum characters retained per resolved analysis item. */
+    public static Integer maxItemChars() {
+        return intValue(safeGet()?.Max_Item_Chars__c, FALLBACK_MAX_ITEM_CHARS);
+    }
+
+    /** @return Maximum characters for the assembled analysis grounding context. */
+    public static Integer maxTotalChars() {
+        return intValue(safeGet()?.Max_Total_Chars__c, FALLBACK_MAX_TOTAL_CHARS);
     }
 
     /**

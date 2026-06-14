@@ -6,7 +6,8 @@
  * The Apex branch is fully wired for phase 1. The Flow branch is implemented to
  * degrade gracefully: it extracts what standard email content allows (flow API
  * name, faulting element, error text) and leaves the rest null. Deeper flow
- * logic is unavailable via standard SOQL and is deferred to a Tooling API phase.
+ * logic is unavailable via standard SOQL; it is retrieved separately through the
+ * Tooling API (NortToolingClient) during analysis grounding.
  *
  * Parsing never throws — failures are reported on ParsedError so the inbound
  * handler can stage the raw payload rather than bounce or lose the email.

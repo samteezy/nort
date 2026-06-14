@@ -93,7 +93,7 @@ Volatile tokens are stripped **before** hashing so near-identical errors don't f
 
 - Managed-package Apex bodies read as `(hidden)` — source reading covers unmanaged org code only.
 - Triggering user is often absent from Apex exception emails — `null` is a normal outcome.
-- Flow internal logic is not reachable via standard SOQL — flow diagnosis degrades to error text + metadata until a Tooling API phase.
+- Flow internal logic is not reachable via standard SOQL — flow internals (and Apex symbol tables, field definitions) are retrieved via the Tooling API (`NortToolingClient`, a same-org Named Credential callout) and assembled by `NortAnalysisGroundingProvider` for the analysis prompt template.
 - Knowledge retrieval is a no-op seam if Knowledge isn't enabled.
 
 ## Setup
@@ -107,7 +107,7 @@ sf apex run test -o nort -l RunLocalTests -c -r human
 echo "NortHeartbeatScheduler.start();" | sf apex run -o nort
 ```
 
-The deploy includes the Email Service itself (`EmailServicesFunction`); only its org-specific inbound address and the agent are wired by hand — see [`docs/AGENT_SETUP.md`](docs/AGENT_SETUP.md).
+The deploy includes the Email Service (`EmailServicesFunction`), the `Nort_Error_Analysis` prompt template (with its Apex grounding binding), and the `Nort_Tooling` External + Named Credential. Wired by hand afterward: the org-specific inbound email address, the Agentforce agent, the External Client App + the per-org secrets/URLs its credentials hold, and the External-Credential principal-access grant — see [`docs/AGENT_SETUP.md`](docs/AGENT_SETUP.md).
 
 ## The credit-discipline proof
 

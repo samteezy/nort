@@ -26,62 +26,53 @@ start_agent agent_router:
 
 subagent error_diagnosis:
     label: "Error Diagnosis"
-    description: "Diagnose a single Salesforce runtime error: given the failing Apex class/method (or flow API name), the exception type, and a normalized message, read scoped source, available flow metadata, and relevant knowledge, then return a fix or the user's next research steps."
+    description: "Orchestrate the diagnosis of a single Salesforce runtime error: decide which code/metadata is implicated, hand it to the code-analysis prompt template, retrieve relevant knowledge, then compose a fix or the user's next research steps."
     reasoning:
         instructions: ->
-            | Research the error using your actions: (1) read the failing Apex source scoped to the
-              failing class and its direct dependencies, (2) read available flow metadata when a flow
-              is involved, and (3) retrieve relevant knowledge. Do not request org-wide source.
-            | Base your conclusion only on what the actions return. Do not call the same action more
-              than once for the same input.
-            | Then decide:
+            | You are an ORCHESTRATOR. You do not read source yourself; you decide what is implicated
+              and delegate code analysis to the "Analyze Error" prompt template (which runs the
+              retrieval + analysis on a dedicated model).
+            | (1) From the failing Apex class/method, flow API name, exception type, and normalized
+              message, decide which code/metadata items are implicated and express them as a list of
+              "type:identifier" tokens, one per line, using only these types:
+              apex:<ClassName>, flow:<Flow_API_Name>, field:<Object.Field>, symboltable:<ClassName>.
+              Keep the list focused (a handful of items) — do not request org-wide source.
+            | (2) Call analyze_error AT MOST ONCE with the error context and that token list. It
+              returns the code-level analysis.
+            | (3) Separately call retrieve_knowledge for any relevant articles.
+            | (4) Compose the final answer from BOTH the analysis result and any relevant knowledge:
             | - If the evidence supports a concrete fix, make "recommendation" that fix: specific and
               actionable (what to change and where).
             | - If it does not, make "recommendation" the specific next steps the user should
               investigate (which classes, logs, or records to inspect, and why).
-            | Set "rootCause" to what your research established, or the most likely area if it is
-              undetermined.
+            | Set "rootCause" to what the analysis established, or the most likely area if undetermined.
             | Respond with ONLY a JSON object and nothing else: {"rootCause": "...", "recommendation": "..."}.
               Do not use the show_command tool; compose your answer as direct text.
+        # analyze_error targets the Nort_Error_Analysis prompt template (deployed); its Apex
+        # grounding resource is NortAnalysisGroundingProvider (deployed). Declared in this bundle
+        # so the wiring deploys — no manual Agent Builder step. See docs/AGENT_SETUP.md.
         actions:
-            read_apex_source: @actions.read_apex_source
-                with className = ...
-            read_flow_metadata: @actions.read_flow_metadata
-                with flowApiName = ...
+            analyze_error: @actions.analyze_error
+                with "Input:requestedItems" = ...
+                with "Input:exceptionType" = ...
+                with "Input:messageTemplate" = ...
             retrieve_knowledge: @actions.retrieve_knowledge
                 with searchText = ...
     actions:
-        read_apex_source:
-            description: "Read the failing Apex class body plus its direct dependencies (scoped)."
-            target: "apex://NortApexSourceAction"
+        analyze_error:
+            description: "Resolve a focused list of implicated code/metadata tokens into one bounded context and return the code-level root-cause analysis. Call at most once."
+            target: "prompt://Nort_Error_Analysis"
             inputs:
-                className: string
-                    description: "The failing Apex class to read."
+                "Input:requestedItems": string
+                    description: "Newline-delimited type:identifier tokens (apex:/flow:/field:/symboltable:), kept focused — never org-wide."
                     is_required: True
+                "Input:exceptionType": string
+                    description: "The exception type from the error context."
+                "Input:messageTemplate": string
+                    description: "The normalized error message from the error context."
             outputs:
-                source: string
-                    description: "Scoped class source plus dependencies."
-                    is_displayable: True
-                    filter_from_agent: False
-                dependencyNames: list[string]
-                    description: "Direct dependency class names included."
-                    filter_from_agent: False
-        read_flow_metadata:
-            description: "Read reachable flow-level metadata for a faulting flow."
-            target: "apex://NortFlowMetadataAction"
-            inputs:
-                flowApiName: string
-                    description: "API name of the faulting flow."
-                    is_required: True
-            outputs:
-                processType: string
-                    description: "Flow process type."
-                    filter_from_agent: False
-                triggerType: string
-                    description: "Flow trigger type."
-                    filter_from_agent: False
-                note: string
-                    description: "Notes about metadata availability."
+                promptResponse: string
+                    description: "The code-level analysis: root cause and recommendation."
                     filter_from_agent: False
         retrieve_knowledge:
             description: "Retrieve relevant knowledge article titles to ground the diagnosis."

@@ -82,7 +82,11 @@ public class TestDataFactory {
             Volume_Cap__c = null,
             Agent_API_Name__c = 'Nort_Error_Diagnosis_Agent',
             Case_Queue_DeveloperName__c = 'Nort_Error_Triage',
-            Case_RecordType_DeveloperName__c = 'Nort_Automated_Error'
+            Case_RecordType_DeveloperName__c = 'Nort_Automated_Error',
+            Tooling_Named_Credential__c = 'Nort_Tooling',
+            Max_Analysis_Items__c = 8,
+            Max_Item_Chars__c = 6000,
+            Max_Total_Chars__c = 24000
         );
     }
 
