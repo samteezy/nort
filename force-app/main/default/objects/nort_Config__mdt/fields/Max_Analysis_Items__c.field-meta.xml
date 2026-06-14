@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Max_Analysis_Items__c</fullName>
+    <label>Max Analysis Items</label>
+    <description>Maximum metadata items resolved per analysis grounding call. Primary spend guardrail: it also caps the number of Tooling callouts a single grounding invocation can make. NortConfig falls back to 8 when blank.</description>
+    <inlineHelpText>Max metadata items the analysis grounding will resolve per call (e.g. 8).</inlineHelpText>
+    <type>Number</type>
+    <precision>18</precision>
+    <scale>0</scale>
+    <required>false</required>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

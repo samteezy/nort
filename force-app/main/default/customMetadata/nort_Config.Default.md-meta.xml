@@ -34,4 +34,20 @@
         <field>Case_RecordType_DeveloperName__c</field>
         <value xsi:type="xsd:string">Nort_Automated_Error</value>
     </values>
+    <values>
+        <field>Tooling_Named_Credential__c</field>
+        <value xsi:type="xsd:string">Nort_Tooling</value>
+    </values>
+    <values>
+        <field>Max_Analysis_Items__c</field>
+        <value xsi:type="xsd:double">8</value>
+    </values>
+    <values>
+        <field>Max_Item_Chars__c</field>
+        <value xsi:type="xsd:double">6000</value>
+    </values>
+    <values>
+        <field>Max_Total_Chars__c</field>
+        <value xsi:type="xsd:double">24000</value>
+    </values>
 </CustomMetadata>

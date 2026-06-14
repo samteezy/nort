@@ -151,8 +151,9 @@ public with sharing class NortAgentInvoker {
             'Target: ' + target + '.',
             'Exception type: ' + nullToEmpty(request.exceptionType) + '.',
             'Normalized message: ' + nullToEmpty(request.messageTemplate) + '.',
-            'Use your actions to read the failing Apex source (scoped to the failing class and its direct dependencies),',
-            'read available flow metadata, and retrieve any relevant knowledge articles.'
+            'Identify which code/metadata items are implicated (as apex:/flow:/field:/symboltable: tokens)',
+            'and call your analysis action with the error context and that list; retrieve any relevant',
+            'knowledge separately; then compose the result.'
         };
         if (String.isNotBlank(request.rawMessage)) {
             lines.add('Raw notification (verbatim, may be truncated):\n' + truncateForPrompt(request.rawMessage));

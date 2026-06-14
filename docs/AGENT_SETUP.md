@@ -5,7 +5,9 @@ The deployable metadata covers the entire **code** loop (objects, config, ingest
 1. The inbound **Email Address** on the deployed Email Service, plus routing Apex exception emails to it (the address carries an org-specific context user and a server-generated domain, so it isn't deployable — see §1).
 2. The **Agentforce agent** (topic + grounded prompt) that the loop invokes headlessly.
 
-This split is intentional: the Apex action surface and the service configuration (the genuinely reusable, testable, reproducible parts) are deployed; the org-specific inbound address and the agent are composed per org.
+Plus, for the orchestrator/analysis design (see §5): the **`Nort_Error_Analysis` prompt template** (its body, Salesforce-default model, and Apex grounding-resource binding) and the **External Client App + Named/External Credential** that back the same-org Tooling API callouts.
+
+This split is intentional: the Apex action surface and the service configuration (the genuinely reusable, testable, reproducible parts) are deployed; the org-specific inbound address, the agent, the prompt template, and the Tooling connection are composed per org.
 
 ---
 
@@ -56,14 +58,18 @@ Create an agent whose **API name matches** `nort_Config__mdt.Default.Agent_API_N
 **Instructions (paste into the topic):**
 > You diagnose one Salesforce runtime error at a time. You are given the failing Apex class/method (or flow API name and faulting element), the exception type, and a normalized error message. Use your actions to (1) read the failing Apex source scoped to the failing class and its direct dependencies, (2) read available flow metadata, and (3) retrieve relevant knowledge articles. Do not request org-wide source. Base your conclusion only on what the actions return. Respond with ONLY a JSON object: `{"rootCause": "...", "recommendation": "..."}`.
 
-### Actions (assign these deployed Apex invocable actions)
-| Action | Apex | Purpose |
-|---|---|---|
-| Read Apex Source | `NortApexSourceAction` | scoped class body + direct dependencies |
-| Read Flow Metadata | `NortFlowMetadataAction` | reachable flow metadata (degrades gracefully) |
-| Retrieve Knowledge | `NortKnowledgeRetrievalAction` | grounding articles (no-op if Knowledge off) |
+### Actions
 
-These appear under the **Nort Error Remediation** category in Agent Builder (set via the `@InvocableMethod category`).
+The agent is an **orchestrator**: it decides which code/metadata is implicated and hands a token list to the analysis prompt template, which does the heavy retrieval + analysis. It still retrieves Knowledge directly.
+
+| Action | Backed by | Purpose |
+|---|---|---|
+| Analyze Error | `Nort_Error_Analysis` prompt template (§5) | resolves the implicated code/metadata and returns the structured root-cause/recommendation |
+| Retrieve Knowledge | `NortKnowledgeRetrievalAction` (Apex) | grounding articles (no-op if Knowledge off) |
+
+Wire **Analyze Error** as a prompt-template action on the subagent with inputs `requestedItems` (newline-delimited `type:identifier` tokens — `apex:`/`flow:`/`field:`/`symboltable:`), `exceptionType`, and `messageTemplate`. The agent calls it **at most once**, calls Retrieve Knowledge separately, and composes the final JSON from both.
+
+> `NortApexSourceAction` and `NortFlowMetadataAction` are **no longer direct agent actions** — their logic is now invoked internally by the prompt template's grounding (`NortAnalysisGroundingProvider`). The Apex stays deployed (and is still valid `@InvocableMethod` for later MCP republication); it is just not assigned to the agent. The `Retrieve Knowledge` action appears under the **Nort Error Remediation** category in Agent Builder (set via the `@InvocableMethod category`).
 
 ### Grounded prompt template (optional)
 For tighter grounding, back the topic with a prompt template that merges the signature fields and the action outputs. The prompt above is sufficient for phase 1; a prompt template is a refinement, not a requirement.
@@ -89,6 +95,50 @@ NortHeartbeatScheduler.start();   // schedules the first heartbeat one window fr
 Stop it with `NortHeartbeatScheduler.stop();`. Retune cadence by editing `nort_Config__mdt.Default.Window_Minutes__c` — the next cycle adopts it.
 
 ---
+
+## 5. Tooling API connection (same-org callout)
+
+`NortToolingClient` reads org internals SOQL can't — flow logic (decisions/assignments/fault paths), Apex symbol tables, field definitions — by calling the org's **own** Tooling API through a Named Credential: `callout:Nort_Tooling/services/data/v66.0/tooling/...`. The code is deployed; the connection is composed per org because it carries org-specific secrets and the My Domain URL.
+
+**2026 best practice:** authenticate with an **External Client App** (Connected Apps are restricted as of Sept 2025) using the **OAuth 2.0 Client Credentials** flow, run as a dedicated integration user.
+
+1. **Integration user.** Pick/create an active user and assign `Nort_Error_Remediation` (it grants `ApiEnabled` + `AuthorApex`/`ViewSetup`, so callouts have the same metadata-read rights the loop uses).
+2. **External Client App.** Setup → **External Client App Manager** → *New*. Enable OAuth; enable the **Client Credentials Flow**; set its **Run-As** user to the integration user; scopes `api` (+ `web`/`refresh_token` as needed). Note the consumer key/secret.
+3. **External Credential.** The skeleton deploys as `externalCredentials/Nort_Tooling.externalCredential-meta.xml` (OAuth, Client Credentials, named principal `NortToolingPrincipal`). In Setup, finish the principal: supply the ECA's consumer key/secret as the authentication parameters. *(Verify the AuthProtocolVariant wiring against your org — the deployed file is the reproducible skeleton.)*
+4. **Named Credential.** The skeleton deploys as `namedCredentials/Nort_Tooling.namedCredential-meta.xml` referencing the External Credential, with `generateAuthorizationHeader=true`. **Set its `Url` to this org's My Domain** (`https://<MyDomain>.my.salesforce.com`) — the source ships a placeholder. Its developer name must stay `Nort_Tooling` (or update `nort_Config__mdt.Default.Tooling_Named_Credential__c`).
+5. **Principal access.** `Nort_Error_Remediation` already grants `externalCredentialPrincipalAccesses` for `Nort_Tooling - NortToolingPrincipal`; confirm the running/integration user holds the permission set.
+
+**Verify:**
+```bash
+echo "System.debug(NortToolingClient.fetchFlowMetadata('Some_Flow_API_Name'));" | sf apex run -o <alias>
+```
+Expect a populated summary (or a clean `success=false` with a reason — the client degrades, never throws into the loop).
+
+> **Spend discipline:** `NortAnalysisGroundingProvider` caps retrieval via `nort_Config__mdt` (`Max_Analysis_Items__c` — also the callout budget — `Max_Item_Chars__c`, `Max_Total_Chars__c`). Tune there, never in code.
+
+## 6. Analysis prompt template
+
+Create a **Flex prompt template** named `Nort_Error_Analysis` in Prompt Builder.
+
+- **Inputs:** `requestedItems` (Text, required), `exceptionType` (Text), `messageTemplate` (Text).
+- **Grounding:** add `NortAnalysisGroundingProvider` as an **Apex grounding resource** (it's deployed and registered via `@InvocableMethod(... callout=true)`). Map the template inputs to its `Request` variables of the same names; reference its `groundingContext` output as a merge field in the body. This is the single place that retrieves and bounds the code/metadata.
+- **Body:** instruct the model to diagnose using ONLY the grounding context and respond with ONLY `{"rootCause": "...", "recommendation": "..."}`.
+- **Model:** Salesforce default for now. (Per-template model selection is config — a stronger/BYO model, e.g. Claude via the Models API, can be swapped in later with no code change.)
+- Publish it, then wire it as the **Analyze Error** agent action (§2).
+
+**Must-verify-against-org for §§5–6:**
+1. **Callouts in the prompt-template grounding context.** If grounding Apex cannot make outbound callouts in your org, use the **staged-record fallback**: add a normal `@InvocableMethod(callout=true)` agent action that runs the same `NortAnalysisGroundingProvider` retrieval *before* analysis, writes the bounded context to a Long Text field on `Error_Signature__c`, and have the template ground from that field (a DML-free SOQL read). The retrieval logic is unchanged — only the wiring moves.
+2. The exact prompt-template-as-agent-action wiring and input mapping.
+3. `genAiPromptTemplate` model-config deployability at API v66.0 (author in Prompt Builder if not deployable via SFDX).
+4. The External Credential client-credentials parameter shape and the Named Credential `Url`.
+
+## 7. Smoke test the orchestrator end to end
+
+1. Stage a known `Error_Signature__c` (Apex or Flow) and mark it `Queued`.
+2. Run `NortHeartbeatScheduler` / `NortDiagnosisQueueable` (or call `NortAgentInvoker.diagnose(...)`).
+3. Confirm the agent requested a focused token list, the template returned `{rootCause, recommendation}`, and a Case routed via `NortCaseService`.
+
+> **Spend ledger note:** the template adds a second (analysis) model call inside each orchestrator invocation. `Agent_Invocation_Count__c` still counts orchestrator invocations (one per unique signature — the dedup-before-spend invariant is intact) but no longer equals total credit/token spend.
 
 ## MCP republication (later phase)
 

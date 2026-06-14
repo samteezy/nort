@@ -113,4 +113,18 @@
         <apexClass>NortKnowledgeRetrievalAction</apexClass>
         <enabled>true</enabled>
     </classAccesses>
+    <classAccesses>
+        <apexClass>NortToolingClient</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>NortAnalysisGroundingProvider</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <!-- Lets the running/integration user use the Nort_Tooling External Credential
+         named principal for same-org Tooling API callouts. -->
+    <externalCredentialPrincipalAccesses>
+        <enabled>true</enabled>
+        <externalCredentialPrincipal>Nort_Tooling - NortToolingPrincipal</externalCredentialPrincipal>
+    </externalCredentialPrincipalAccesses>
 </PermissionSet>

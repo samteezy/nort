@@ -33,4 +33,17 @@ public with sharing class NortConstants {
     public static final String DIAG_DIAGNOSING = 'Diagnosing';
     public static final String DIAG_DIAGNOSED = 'Diagnosed';
     public static final String DIAG_FAILED = 'Failed';
+
+    // Analysis-grounding descriptor types (requestedItems "type:identifier" tokens).
+    // The agent passes these to NortAnalysisGroundingProvider; anything not in this
+    // set is dropped (recorded as a "skipped" note). Knowledge is deliberately absent:
+    // it stays a direct agent action, never part of the code-analysis grounding.
+    public static final String ITEM_TYPE_APEX = 'apex';
+    public static final String ITEM_TYPE_FLOW = 'flow';
+    public static final String ITEM_TYPE_FIELD = 'field';
+    public static final String ITEM_TYPE_SYMBOLTABLE = 'symboltable';
+
+    // Separator between an item's type and identifier (split on first occurrence only,
+    // so free-text identifiers may themselves contain the separator).
+    public static final String ITEM_TYPE_SEPARATOR = ':';
 }

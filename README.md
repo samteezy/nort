@@ -93,7 +93,7 @@ Volatile tokens are stripped **before** hashing so near-identical errors don't f
 
 - Managed-package Apex bodies read as `(hidden)` — source reading covers unmanaged org code only.
 - Triggering user is often absent from Apex exception emails — `null` is a normal outcome.
-- Flow internal logic is not reachable via standard SOQL — flow diagnosis degrades to error text + metadata until a Tooling API phase.
+- Flow internal logic is not reachable via standard SOQL — flow internals (and Apex symbol tables, field definitions) are retrieved via the Tooling API (`NortToolingClient`, a same-org Named Credential callout) and assembled by `NortAnalysisGroundingProvider` for the analysis prompt template.
 - Knowledge retrieval is a no-op seam if Knowledge isn't enabled.
 
 ## Setup

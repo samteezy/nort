@@ -1,11 +1,12 @@
 /**
  * Agentforce action: reads available flow metadata for a faulting flow.
  *
- * Phase-1 limitation by design: standard SOQL exposes only flow metadata
- * (FlowDefinitionView) — API name, label, type, status — never internal
- * elements or logic. This action returns what is reachable and always includes
- * a degradation note so the agent grounds honestly. Deeper flow logic awaits a
- * Tooling API phase.
+ * Standard SOQL exposes only flow metadata (FlowDefinitionView) — API name,
+ * label, type, status — never internal elements or logic. This action returns
+ * that reachable metadata and always includes a degradation note. Deeper flow
+ * internals (decisions, assignments, fault paths) are retrieved separately via
+ * NortToolingClient (Tooling API) and assembled by NortAnalysisGroundingProvider,
+ * which calls this action for the metadata half.
  *
  * Authored with @InvocableVariable I/O for later MCP republication.
  */
