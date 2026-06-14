@@ -29,39 +29,42 @@ subagent error_diagnosis:
     description: "Orchestrate the diagnosis of a single Salesforce runtime error: decide which code/metadata is implicated, hand it to the code-analysis prompt template, retrieve relevant knowledge, then compose a fix or the user's next research steps."
     reasoning:
         instructions: ->
-            | You are an ORCHESTRATOR. You do not read source yourself; you decide what is implicated
-              and delegate code analysis to the "Analyze Error" prompt template (which runs the
-              retrieval + analysis on a dedicated model).
-            | (1) From the failing Apex class/method, flow API name, exception type, and normalized
-              message, decide which code/metadata items are implicated and express them as a list of
-              "type:identifier" tokens, one per line, using only these types:
-              apex:<ClassName>, flow:<Flow_API_Name>, field:<Object.Field>, symboltable:<ClassName>.
-              Keep the list focused (a handful of items) — do not request org-wide source.
-            | (2) Call analyze_error AT MOST ONCE with the error context and that token list. It
-              returns the code-level analysis.
-            | (3) Separately call retrieve_knowledge for any relevant articles.
-            | (4) Compose the final answer from BOTH the analysis result and any relevant knowledge:
-            | - If the evidence supports a concrete fix, make "recommendation" that fix: specific and
-              actionable (what to change and where).
-            | - If it does not, make "recommendation" the specific next steps the user should
-              investigate (which classes, logs, or records to inspect, and why).
-            | Set "rootCause" to what the analysis established, or the most likely area if undetermined.
-            | Respond with ONLY a JSON object and nothing else: {"rootCause": "...", "recommendation": "..."}.
-              Do not use the show_command tool; compose your answer as direct text.
-        # analyze_error targets the Nort_Error_Analysis prompt template (deployed); its Apex
-        # grounding resource is NortAnalysisGroundingProvider (deployed). Declared in this bundle
-        # so the wiring deploys — no manual Agent Builder step. See docs/AGENT_SETUP.md.
+            |You are an ORCHESTRATOR running an ITERATIVE investigation of ONE Salesforce runtime error. You do not read source yourself; you decide what is implicated, delegate the deep code/metadata reading to the "Analyze Error" prompt template (which runs retrieval + a focused analysis on a dedicated model), and reason over what it returns — looping until you have established the root cause or your research budget is spent. A single pass is rarely enough; keep investigating while the evidence is incomplete and budget remains.
+             Work in rounds:
+             (1) HYPOTHESIZE. From the failing Apex class/method, flow API name, exception type, and normalized message, decide which code/metadata items are most likely implicated and express them as a list of "type:identifier" tokens, one per line, using only these types: apex:<ClassName>, flow:<Flow_API_Name>, field:<Object.Field>, symboltable:<ClassName>. Keep each round focused (a handful of items) — never request org-wide source.
+             (2) VERIFY EXISTENCE. When useful, use the Query Records tools to confirm a record, object, or field exists, or to inspect data values, before spending an analysis call on it.
+             (3) GATHER EVIDENCE. Call analyze_error with the error context and that focused token list. It returns a focused analysis: findings about the implicated code/metadata, the cause they support (if any), and suggestedNextItems — further tokens the context referenced but did not include. Also read any "notes" in the result for tokens that were skipped or failed to resolve.
+             (4) CONSULT DOCS. If a platform feature, limit, or configuration question arises, ask Salesforce official documentation.
+             (5) REASSESS. Decide whether the evidence now establishes the root cause with confidence. If it does NOT and budget remains, refine your token list — using suggestedNextItems, named dependencies, the symbol table of an implicated class, or fields/flows surfaced so far — and return to step 3 with a NEW focused set (each analyze_error call should add new suspects, not repeat a prior one). Stop when you are confident, or when your analysis/knowledge budget is nearly spent.
+             (6) COMPOSE the final answer from ALL the evidence gathered across rounds:
+             - If the evidence supports a concrete fix, make "recommendation" that fix: specific and actionable (what to change and where).
+             - If it does not, make "recommendation" the specific next steps the user should investigate (which classes, logs, or records to inspect, and why).
+             Set "rootCause" to what the investigation established, or the most likely area if still undetermined.
+             Respond with ONLY a JSON object and nothing else: {"rootCause": "...", "recommendation": "..."}.
+             Do not use the show_command tool; compose your answer as direct text.
         actions:
             analyze_error: @actions.analyze_error
+                available when @variables.Analysis_Count < 10
                 with "Input:requestedItems" = ...
                 with "Input:exceptionType" = ...
                 with "Input:messageTemplate" = ...
-            retrieve_knowledge: @actions.retrieve_knowledge
-                with searchText = ...
+                set @variables.Analysis_Count=@variables.Analysis_Count + 1
+            AnswerQuestionsWithSalesforceDocumentation: @actions.AnswerQuestionsWithSalesforceDocumentation
+                available when @variables.Knowledge_Count < 5
+                with query = ...
+                set @variables.Knowledge_Count=@variables.Knowledge_Count + 1
+            QueryRecordsWithAggregate: @actions.QueryRecordsWithAggregate
+                with query = ...
+                with customizationInstructions = ...
+            QueryRecords: @actions.QueryRecords
+                with query = ...
+                with customizationInstructions = ...
+
+
     actions:
         analyze_error:
-            description: "Resolve a focused list of implicated code/metadata tokens into one bounded context and return the code-level root-cause analysis. Call at most once."
-            target: "prompt://Nort_Error_Analysis"
+            description: "Resolve a focused list of implicated code/metadata tokens into one bounded context and return a focused metadata-level analysis: findings, the cause they support (if any), and further tokens worth investigating. This is a research step, not the final verdict — call it repeatedly across rounds with refined, focused token sets as new suspects emerge."
+            target: "prompt://Nort_Error_Research"
             inputs:
                 "Input:requestedItems": string
                     description: "Newline-delimited type:identifier tokens (apex:/flow:/field:/symboltable:), kept focused — never org-wide."
@@ -72,19 +75,96 @@ subagent error_diagnosis:
                     description: "The normalized error message from the error context."
             outputs:
                 promptResponse: string
-                    description: "The code-level analysis: root cause and recommendation."
+                    description: "Focused metadata-level analysis: findings, the supportable cause (if any), and suggested next tokens to investigate."
                     filter_from_agent: False
-        retrieve_knowledge:
-            description: "Retrieve relevant knowledge article titles to ground the diagnosis."
-            target: "apex://NortKnowledgeRetrievalAction"
+        AnswerQuestionsWithSalesforceDocumentation:
+            description: "Answers questions about how to use Salesforce products with Salesforce documentation."
+            label: "Answer Questions with Salesforce Documentation (Beta)"
+            require_user_confirmation: False
+            include_in_progress_indicator: True
+            progress_indicator_message: "Searching Salesforce Documentation"
+            source: "AdminCopilot__AnswerQuestionsWithSalesforceDocumentation"
+            target: "standardInvocableAction://answerQuestionsWithSalesforceDocumentation"
             inputs:
-                searchText: string
-                    description: "Text to search knowledge articles for."
+                "query": string
+                    description: |
+                        Required. A string created by generative AI to be used when searching Salesforce documentation for information about their products.
+                    label: "Query"
                     is_required: True
+                    is_user_input: True
             outputs:
-                articleTitles: list[string]
-                    description: "Titles of relevant knowledge articles."
+                "helpDocumentationSummary": object
+                    description: |
+                        A string formatted as rich text that includes a summary of the information about Salesforce products retrieved from the Salesforce documentation and links to the source articles.
+                    label: "Salesforce Documentation Summary"
+                    is_displayable: True
                     filter_from_agent: False
-                knowledgeAvailable: boolean
-                    description: "Whether Knowledge is available in this org."
+                    complex_data_type_name: "lightning__richTextType"
+        QueryRecordsWithAggregate:
+            description: |
+                Answers aggregation questions (such as count, sum, max, min, or average) about Salesforce CRM data based on the user input and specific conditions, such as field values. For example 'Find the number of open opportunities created in the last 5 days.'
+            label: "Query Records with Aggregate"
+            require_user_confirmation: False
+            include_in_progress_indicator: True
+            source: "EmployeeCopilot__QueryRecordsWithAggregate"
+            target: "standardInvocableAction://queryRecordsWithAggregate"
+                
+            inputs:
+                "query": string
+                    description: |
+                      The complete query utterance in natural language with appropriate context which can include appropriate CRM object name, record name, and record id to facilitate aggregating fields on CRM records. Input should not contain any SOQL or SQL, but plain natural language in English.
+                    label: "query"
+                    is_required: True
+                    is_user_input: True
+                "customizationInstructions": string
+                    description: |
+                      Custom instructions for the action from the user's input to optimize the query.
+                    label: "customizationInstructions"
+                    is_required: False
+                    is_user_input: False
+                
+            outputs:
+                "result": object
+                    description: |
+                      Results retrieved based on input query, only populated when the results are coming from an aggregation (from Count, Sum, or Group by).
+                    label: "result"
+                    is_displayable: True
+                    filter_from_agent: True
+                    complex_data_type_name: "lightning__richTextType"
+        QueryRecords:
+            description: |
+                Finds and retrieves Salesforce CRM records based on user input and specific conditions, such as field values. This action automatically identifies the correct records and object type. e.g. 'Find all open opportunities created in the last 5 days sorted by created date.'
+            label: "Query Records"
+            require_user_confirmation: False
+            include_in_progress_indicator: True
+            source: "EmployeeCopilot__QueryRecords"
+            target: "standardInvocableAction://queryRecords"
+                
+            inputs:
+                "query": string
+                    description: |
+                      The question or request from the user's input. The input must mention the Salesforce object type, such as Account, Lead, or Contact. Input should not contain any SOQL or SQL, but plain natural language in English. Do not generate SQL or SOQL.
+                    label: "query"
+                    is_required: True
+                    is_user_input: True
+                "customizationInstructions": string
+                    description: |
+                      Custom instructions for the action from the user's input to optimize the query.
+                    label: "customizationInstructions"
+                    is_required: False
+                    is_user_input: False
+                
+            outputs:
+                "result": list[object]
+                    description: |
+                      A list of matching Salesforce CRM records with details about each record.
+                    label: "result"
+                    is_displayable: True
                     filter_from_agent: False
+                    complex_data_type_name: "lightning__recordInfoType"
+
+variables:
+    Analysis_Count: mutable number
+        description: "Number of times analyze tool is run"
+    Knowledge_Count: mutable number
+        description: "Number of times knowledge is searched"

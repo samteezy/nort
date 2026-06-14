@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiPromptTemplate xmlns="http://soap.sforce.com/2006/04/metadata">
+    <activeVersionIdentifier>NortErrorResearchBody000000000=_1</activeVersionIdentifier>
+    <description>Analyzes the bounded grounding context from NortAnalysisGroundingProvider for one runtime error and returns focused findings, the supportable cause, and suggested next items — a research step the diagnosis agent calls iteratively, not a final verdict.</description>
+    <developerName>Nort_Error_Research</developerName>
+    <masterLabel>Nort Error Research</masterLabel>
+    <overridable>false</overridable>
+    <templateVersions>
+        <content>You are a Salesforce metadata analyst supporting an error-diagnosis orchestrator. Your job is to do the deep reading of the code and metadata below and return a focused, high-value analysis the orchestrator can act on — not a final verdict. Use ONLY the grounding context provided; do not use outside knowledge and do not invent details that are not present in it.
+
+Error type: {!$Input:exceptionType}
+Error message (normalized): {!$Input:messageTemplate}
+
+Grounding context (the implicated code and metadata):
+&quot;&quot;&quot;
+{!$Apex:NortAnalysisGroundingProvider.groundingContext}
+&quot;&quot;&quot;
+
+Report your analysis as three things:
+- findings: what the implicated code and metadata reveal about how this error could occur — the specific behaviors, values, gaps, and contradictions that bear on it. Cite the exact class/method, flow element, or field, and quote the relevant lines, so the orchestrator can act without re-reading the source. Pull out and explain what is pertinent; optimize for relevance and signal, not length.
+- likelyCause: the single most likely cause the context supports. If the context is insufficient to determine it, say so plainly and state what is missing rather than guessing.
+- suggestedNextItems: additional &quot;type:identifier&quot; tokens (apex:/flow:/field:/symboltable:) that the context references but does not include and that would clarify the diagnosis. Leave empty if the context is sufficient.
+
+Respond with ONLY a single JSON object and nothing else — no markdown, no preamble, no code fences:
+{&quot;findings&quot;: &quot;...&quot;, &quot;likelyCause&quot;: &quot;...&quot;, &quot;suggestedNextItems&quot;: &quot;...&quot;}
+</content>
+        <fileDroppingStrategy>{&quot;dropFilesBy&quot;:&quot;LAST_MODIFIED_DATE&quot;,&quot;dropFileStartingWith&quot;:&quot;OLDEST&quot;}</fileDroppingStrategy>
+        <inputs>
+            <apiName>requestedItems</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>Requested Items</masterLabel>
+            <referenceName>Input:requestedItems</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>exceptionType</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>Exception Type</masterLabel>
+            <referenceName>Input:exceptionType</referenceName>
+            <required>false</required>
+        </inputs>
+        <inputs>
+            <apiName>messageTemplate</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>Normalized Message</masterLabel>
+            <referenceName>Input:messageTemplate</referenceName>
+            <required>false</required>
+        </inputs>
+        <isCitationEnabled>false</isCitationEnabled>
+        <outputSchema>nortEvidence</outputSchema>
+        <primaryModel>sfdc_ai__DefaultBedrockAnthropicClaude46Sonnet</primaryModel>
+        <responseFormat>JSON</responseFormat>
+        <status>Published</status>
+        <templateDataProviders>
+            <definition>apex://NortAnalysisGroundingProvider</definition>
+            <description>Resolves requested code/metadata items (apex/flow/field/symboltable) into one bounded context for the analysis prompt template.</description>
+            <label>Nort: Build Analysis Grounding</label>
+            <parameters>
+                <definition>primitive://String</definition>
+                <isRequired>false</isRequired>
+                <parameterName>exceptionType</parameterName>
+                <valueExpression>{!$Input:exceptionType}</valueExpression>
+            </parameters>
+            <parameters>
+                <definition>primitive://String</definition>
+                <isRequired>false</isRequired>
+                <parameterName>messageTemplate</parameterName>
+                <valueExpression>{!$Input:messageTemplate}</valueExpression>
+            </parameters>
+            <parameters>
+                <definition>primitive://String</definition>
+                <isRequired>true</isRequired>
+                <parameterName>requestedItems</parameterName>
+                <valueExpression>{!$Input:requestedItems}</valueExpression>
+            </parameters>
+            <referenceName>Apex:NortAnalysisGroundingProvider</referenceName>
+        </templateDataProviders>
+        <templateFormat>FormulaExpression</templateFormat>
+        <versionIdentifier>NortErrorResearchBody000000000=_1</versionIdentifier>
+    </templateVersions>
+    <type>einstein_gpt__flex</type>
+    <visibility>Global</visibility>
+</GenAiPromptTemplate>

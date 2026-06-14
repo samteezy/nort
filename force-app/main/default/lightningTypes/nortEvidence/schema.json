@@ -1,0 +1,23 @@
+{
+  "title" : "nortEvidence",
+  "lightning:type" : "lightning__objectType",
+  "properties" : {
+    "findings" : {
+      "title" : "findings",
+      "description" : "Focused, high-value analysis of what the implicated code and metadata reveal about how the error could occur, citing specific classes/methods, flow elements, or fields.",
+      "lightning:type" : "lightning__textType"
+    },
+    "likelyCause" : {
+      "title" : "likelyCause",
+      "description" : "The single most likely cause the grounding context supports, or a plain statement of what is missing if the context is insufficient.",
+      "lightning:type" : "lightning__textType"
+    },
+    "suggestedNextItems" : {
+      "title" : "suggestedNextItems",
+      "description" : "Additional type:identifier tokens (apex:/flow:/field:/symboltable:) referenced by the context but not included, worth investigating next. Empty when the context is sufficient.",
+      "lightning:type" : "lightning__textType"
+    }
+  },
+  "required" : [ "findings", "likelyCause" ],
+  "description" : ""
+}
